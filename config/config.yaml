@@ -52,7 +52,34 @@ scoring:
   whitelist_venues: []
 
 embedding:
+  provider: "voyage"
   model: "voyage-3.5"
   api_key: "${VOYAGE_API_KEY}"
   input_type: "document"
   batch_size: 128
+
+# LLM Configuration for AI summaries
+llm:
+  enabled: true
+  provider: "openrouter"
+  api_key: "${OPENROUTER_API_KEY}"
+  model: "deepseek/deepseek-v3.2-exp"
+  max_tokens: 1024
+  temperature: 0.3
+  retry:
+    max_attempts: 3
+    backoff_factor: 2.0
+    initial_delay: 1.0
+  summarize:
+    top_n: 20
+    cache_expiry_days: 30
+
+# Output Configuration
+output:
+  rss:
+    title: "ZotWatch Feed"
+    link: "https://example.com"
+    description: "AI-assisted literature watch"
+  html:
+    template: "report.html"
+    include_summaries: true
