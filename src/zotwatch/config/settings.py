@@ -68,27 +68,12 @@ class ScraperConfig(BaseModel):
     use_llm_fallback: bool = True  # Use LLM when rule extraction fails
 
 
-class SemanticScholarConfig(BaseModel):
-    """Semantic Scholar enrichment configuration."""
-
-    enabled: bool = True
-    api_key: str = ""  # Optional, uses shared rate limit without key
-    timeout: float = 30.0
-    max_retries: int = 3
-    backoff_factor: float = 2.0
-    rate_limit_delay: float = 1.0  # seconds between requests
-    batch_size: int = 100  # Papers per batch (max 500)
-    cache_ttl_days: int = 30  # Cache TTL for abstracts
-    # Universal scraper fallback (uses Firefox + LLM extraction)
-    scraper: ScraperConfig = Field(default_factory=ScraperConfig)
-
-
 class SourcesConfig(BaseModel):
     """Data sources configuration."""
 
     crossref: CrossRefConfig = Field(default_factory=CrossRefConfig)
     arxiv: ArxivConfig = Field(default_factory=ArxivConfig)
-    semantic_scholar: SemanticScholarConfig = Field(default_factory=SemanticScholarConfig)
+    scraper: ScraperConfig = Field(default_factory=ScraperConfig)
 
 
 # Scoring Configuration
@@ -226,7 +211,6 @@ __all__ = [
     "ZoteroApiConfig",
     "SourcesConfig",
     "ScraperConfig",
-    "SemanticScholarConfig",
     "ScoringConfig",
     "EmbeddingConfig",
     "LLMConfig",

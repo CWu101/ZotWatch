@@ -248,11 +248,11 @@ def watch(
     click.echo(f"  Found {len(candidates)} candidates")
 
     # Enrich missing abstracts
-    if settings.sources.semantic_scholar.enabled:
-        click.echo("Enriching missing abstracts via Semantic Scholar...")
-        # Create LLM client for universal scraper fallback if enabled
+    if settings.sources.scraper.enabled:
+        click.echo("Enriching missing abstracts via scraper...")
+        # Create LLM client for scraper fallback if enabled
         llm_for_enrichment = None
-        if settings.llm.enabled and settings.sources.semantic_scholar.scraper.enabled:
+        if settings.llm.enabled and settings.sources.scraper.use_llm_fallback:
             try:
                 llm_for_enrichment = _create_llm_client(settings.llm)
                 logger.debug("LLM client created for abstract enrichment scraper")
@@ -272,7 +272,7 @@ def watch(
         if enrich_stats.enriched > 0 or enrich_stats.failed > 0:
             click.echo(
                 f"  Result: +{enrich_stats.enriched} enriched (cache: {enrich_stats.cache_hits}, "
-                f"API: {enrich_stats.api_fetched}, failed: {enrich_stats.failed})"
+                f"scraper: {enrich_stats.scraper_fetched}, failed: {enrich_stats.failed})"
             )
 
     # Deduplicate

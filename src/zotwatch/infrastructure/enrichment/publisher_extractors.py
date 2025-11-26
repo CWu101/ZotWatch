@@ -18,7 +18,7 @@ Supported publishers:
 import html
 import logging
 import re
-from typing import Dict, List, Optional
+from typing import Dict, Optional
 from urllib.parse import urlparse
 
 logger = logging.getLogger(__name__)
@@ -65,12 +65,20 @@ PUBLISHER_CONFIGS: Dict[str, Dict] = {
     },
     "elsevier": {
         "domains": ["sciencedirect.com", "linkinghub.elsevier.com"],
+        # Elsevier's og:description is truncated (~150 chars), so try selectors first
+        "selectors_first": True,
         "meta_tags": [
             ("property", "og:description"),
             ("name", "dc.description"),
             ("name", "description"),
         ],
         "selectors": [
+            # ScienceDirect abstract sections
+            r'<div[^>]*class=["\'][^"\']*abstract[^"\']*author[^"\']*["\'][^>]*>(.*?)</div>',
+            r'<div[^>]*class=["\'][^"\']*author[^"\']*abstract[^"\']*["\'][^>]*>(.*?)</div>',
+            r'<div[^>]*id=["\']abs0\d+["\'][^>]*>(.*?)</div>',
+            r'<div[^>]*id=["\']abss?\d*["\'][^>]*>(.*?)</div>',
+            r'<section[^>]*id=["\']abstracts?["\'][^>]*>.*?<div[^>]*>(.*?)</div>',
             r'<div[^>]*class=["\'][^"\']*abstract[^"\']*["\'][^>]*>(.*?)</div>',
             r'<div[^>]*id=["\']abstracts?["\'][^>]*>(.*?)</div>',
         ],
@@ -252,10 +260,12 @@ def extract_abstract(html_content: str, url: str) -> Optional[str]:
 
     This function tries rule-based extraction first:
     1. Detect publisher from URL
-    2. Try publisher-specific meta tags
-    3. Try publisher-specific CSS selectors
-    4. Try generic meta tags
-    5. Try generic selectors
+    2. Try publisher-specific extraction (meta tags or selectors, order depends on config)
+    3. Try generic meta tags
+    4. Try generic selectors
+
+    Some publishers (e.g., Elsevier) have truncated meta descriptions, so we try
+    selectors first for those publishers (controlled by `selectors_first` config).
 
     If all rules fail, returns None so caller can fall back to LLM.
 
@@ -277,33 +287,61 @@ def extract_abstract(html_content: str, url: str) -> Optional[str]:
         config = PUBLISHER_CONFIGS[publisher]
         meta_tags = config.get("meta_tags", [])
         selectors = config.get("selectors", [])
+        selectors_first = config.get("selectors_first", False)
     else:
         meta_tags = []
         selectors = []
+        selectors_first = False
 
-    # Try publisher-specific meta tags
-    for attr_name, attr_value in meta_tags:
-        content = _extract_meta_tag(html_content, attr_name, attr_value)
-        if content and len(content) >= 100:
-            logger.info(
-                "Extracted abstract from %s meta tag [%s=%s] (%d chars)",
-                publisher,
-                attr_name,
-                attr_value,
-                len(content),
-            )
-            return _clean_html_text(content)
+    # For publishers with truncated meta descriptions, try selectors first
+    if selectors_first:
+        # Try publisher-specific selectors first
+        for selector in selectors:
+            content = _extract_from_selector(html_content, selector)
+            if content:
+                logger.info(
+                    "Extracted abstract from %s selector (%d chars)",
+                    publisher,
+                    len(content),
+                )
+                return content
 
-    # Try publisher-specific selectors
-    for selector in selectors:
-        content = _extract_from_selector(html_content, selector)
-        if content:
-            logger.info(
-                "Extracted abstract from %s selector (%d chars)",
-                publisher,
-                len(content),
-            )
-            return content
+        # Fall back to meta tags
+        for attr_name, attr_value in meta_tags:
+            content = _extract_meta_tag(html_content, attr_name, attr_value)
+            if content and len(content) >= 100:
+                logger.info(
+                    "Extracted abstract from %s meta tag [%s=%s] (%d chars)",
+                    publisher,
+                    attr_name,
+                    attr_value,
+                    len(content),
+                )
+                return _clean_html_text(content)
+    else:
+        # Default order: meta tags first, then selectors
+        for attr_name, attr_value in meta_tags:
+            content = _extract_meta_tag(html_content, attr_name, attr_value)
+            if content and len(content) >= 100:
+                logger.info(
+                    "Extracted abstract from %s meta tag [%s=%s] (%d chars)",
+                    publisher,
+                    attr_name,
+                    attr_value,
+                    len(content),
+                )
+                return _clean_html_text(content)
+
+        # Try publisher-specific selectors
+        for selector in selectors:
+            content = _extract_from_selector(html_content, selector)
+            if content:
+                logger.info(
+                    "Extracted abstract from %s selector (%d chars)",
+                    publisher,
+                    len(content),
+                )
+                return content
 
     # Try generic meta tags
     for attr_name, attr_value in GENERIC_META_TAGS:

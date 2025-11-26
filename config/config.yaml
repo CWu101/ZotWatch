@@ -29,23 +29,17 @@ sources:
       - "Springer Nature"
       - "Elsevier BV"
       - "Multidisciplinary Digital Publishing Institute"
-  # Semantic Scholar enrichment for missing abstracts
-  semantic_scholar:
+  # Abstract scraper for enriching missing abstracts (Camoufox + rule-based + LLM fallback)
+  scraper:
     enabled: true
-    api_key: "${SEMANTIC_SCHOLAR_API_KEY}"  # Optional, get free key at semanticscholar.org/product/api
-    timeout: 30.0
-    max_retries: 3
-    rate_limit_delay: 1.0  # seconds between requests
-    batch_size: 100
-    cache_ttl_days: 30
-    # Universal scraper fallback (Firefox + LLM extraction for any DOI)
-    scraper:
-      enabled: true
-      rate_limit_delay: 2.0  # Seconds between scrape requests
-      timeout: 30000  # Page load timeout (ms)
-      max_html_chars: 15000  # Max HTML chars to send to LLM
-      llm_max_tokens: 1024  # Max tokens for LLM extraction response
-      llm_temperature: 0.1  # Low temperature for accurate extraction
+    max_concurrent: 3  # Parallel browser instances
+    rate_limit_delay: 1.0  # Seconds between requests
+    timeout: 60000  # Page load timeout (ms)
+    max_retries: 2  # Retry attempts per URL
+    max_html_chars: 15000  # Max HTML chars to send to LLM
+    llm_max_tokens: 1024  # Max tokens for LLM extraction response
+    llm_temperature: 0.1  # Low temperature for accurate extraction
+    use_llm_fallback: true  # Use LLM when rule extraction fails
 
 scoring:
   weights:

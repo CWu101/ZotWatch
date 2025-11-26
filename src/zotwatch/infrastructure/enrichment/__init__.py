@@ -5,7 +5,6 @@ from .cache import MetadataCache
 from .llm_extractor import LLMAbstractExtractor
 from .publisher_extractors import PublisherExtractor, extract_abstract, detect_publisher
 from .publisher_scraper import AbstractScraper, PlaywrightManager, UniversalScraper
-from .semantic_scholar import SemanticScholarClient
 from .stealth_browser import StealthBrowser
 
 __all__ = [
@@ -21,7 +20,6 @@ __all__ = [
     "extract_abstract",
     # Other
     "MetadataCache",
-    "SemanticScholarClient",
     "StealthBrowser",
     # Backward compatibility
     "PlaywrightManager",

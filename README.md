@@ -21,7 +21,17 @@ cd ZotWatch
 uv sync
 ```
 
-### 2. 配置环境变量
+### 2. 安装 Camoufox 浏览器
+
+ZotWatch 使用 [Camoufox](https://github.com/nicholaswan/camoufox)（基于 Firefox 的反检测浏览器）从受 Cloudflare 保护的出版商网站抓取论文摘要。安装依赖后需要下载浏览器二进制文件：
+
+```bash
+python -m camoufox fetch
+```
+
+> **注意**：首次下载约需 1-2 分钟，浏览器文件约 200MB。GitHub Actions 会自动处理此步骤并缓存。
+
+### 4. 配置环境变量
 
 复制 `.env.example` 为 `.env` 并填入你的 API 密钥：
 
@@ -38,7 +48,7 @@ cp .env.example .env
 可选的环境变量：
 - `CROSSREF_MAILTO`：Crossref 礼貌池邮箱
 
-### 3. 运行
+### 5. 运行
 
 ```bash
 # 首次全量画像构建（计算所有条目的嵌入）
@@ -173,7 +183,6 @@ llm:
 | `ZOTERO_USER_ID` | ✅ | Zotero 用户 ID（在 API 密钥页面可见） |
 | `VOYAGE_API_KEY` | ✅ | [Voyage AI API 密钥](https://dash.voyageai.com/) |
 | `CROSSREF_MAILTO` | 推荐 | 你的邮箱，用于 Crossref 礼貌池 |
-| `SEMANTIC_SCHOLAR_API_KEY` | 可选 | [Semantic Scholar API 密钥](https://www.semanticscholar.org/product/api)，提高摘要获取成功率 |
 | `OPENROUTER_API_KEY` | 可选 | [OpenRouter API 密钥](https://openrouter.ai/keys)，用于 AI 摘要 |
 | `MOONSHOT_API_KEY` | 可选 | [Kimi API 密钥](https://platform.moonshot.cn/)，用于 AI 摘要（与 OpenRouter 二选一） |
 
@@ -208,7 +217,7 @@ llm:
 | 阶段 | 首次运行 | 后续运行 |
 |------|---------|---------|
 | 依赖安装 | ~1 分钟 | ~10 秒（有缓存） |
-| Playwright 安装 | ~2 分钟 | ~10 秒（有缓存） |
+| Camoufox 安装 | ~2 分钟 | ~10 秒（有缓存） |
 | 画像构建 | ~3-5 分钟 | 跳过（有缓存） |
 | 候选抓取 + 评分 | ~2-3 分钟 | ~2-3 分钟 |
 | **总计** | **~10 分钟** | **~3-5 分钟** |

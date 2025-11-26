@@ -12,16 +12,19 @@ Flow: DOI -> doi.org redirect -> HTML -> Rules extract -> (LLM fallback) -> abst
 import asyncio
 import logging
 import time
-from typing import Dict, List, Optional
+from typing import Callable, Dict, List, Optional
 
 from zotwatch.llm.base import BaseLLMProvider
 
-from .browser_pool import BrowserPool, FetchResult
+from .browser_pool import BrowserPool
 from .llm_extractor import LLMAbstractExtractor
 from .publisher_extractors import PublisherExtractor, extract_abstract
 from .stealth_browser import StealthBrowser
 
 logger = logging.getLogger(__name__)
+
+# Type alias for result callback: (doi, abstract_or_none) -> None
+ResultCallback = Callable[[str, Optional[str]], None]
 
 
 class AbstractScraper:
@@ -159,11 +162,14 @@ class AbstractScraper:
     async def _fetch_batch_async(
         self,
         items: List[Dict[str, str]],
+        on_result: Optional[ResultCallback] = None,
     ) -> Dict[str, str]:
         """Fetch abstracts for multiple DOIs in parallel (async).
 
         Args:
             items: List of dicts with 'doi' and optional 'title'.
+            on_result: Optional callback called for each result as it completes.
+                       Signature: (doi: str, abstract: Optional[str]) -> None
 
         Returns:
             Dict mapping DOI to abstract.
@@ -185,31 +191,51 @@ class AbstractScraper:
         if not doi_urls:
             return {}
 
-        # Fetch pages in parallel
+        abstracts = {}
+        total = len(doi_urls)
+
         async with BrowserPool(
             max_concurrent=self.max_concurrent,
             timeout=self.timeout,
             max_retries=self.max_retries,
         ) as pool:
-            results = await pool.fetch_pages(doi_urls)
+            # Create tasks for each URL
+            tasks = {}
+            for url in doi_urls:
+                task = asyncio.create_task(pool._fetch_with_semaphore(url))
+                tasks[task] = url
 
-        # Extract abstracts from fetched pages
-        abstracts = {}
-        for result in results:
-            if not result.success or not result.html:
-                continue
+            # Process results as they complete
+            completed = 0
+            for coro in asyncio.as_completed(tasks.keys()):
+                result = await coro
+                completed += 1
+                original_url = result.url
 
-            original_url = result.url
-            if original_url not in doi_map:
-                continue
+                if original_url not in doi_map:
+                    continue
 
-            doi, title = doi_map[original_url]
-            final_url = result.final_url or original_url
+                doi, title = doi_map[original_url]
+                abstract = None
 
-            abstract = self._extract_abstract(result.html, final_url, title)
-            if abstract:
-                abstracts[doi] = abstract
-                logger.info("Extracted abstract for %s (%d chars)", doi, len(abstract))
+                if result.success and result.html:
+                    final_url = result.final_url or original_url
+                    abstract = self._extract_abstract(result.html, final_url, title)
+                    if abstract:
+                        abstracts[doi] = abstract
+                        logger.info(
+                            "Parallel [%d/%d]: %s -> success (%d chars)",
+                            completed, total, doi, len(abstract)
+                        )
+                    else:
+                        logger.info("Parallel [%d/%d]: %s -> no abstract found", completed, total, doi)
+                else:
+                    error_msg = result.error or "fetch failed"
+                    logger.info("Parallel [%d/%d]: %s -> %s", completed, total, doi, error_msg)
+
+                # Call callback immediately for each result
+                if on_result:
+                    on_result(doi, abstract)
 
         return abstracts
 
@@ -217,12 +243,15 @@ class AbstractScraper:
         self,
         items: List[Dict[str, str]],
         parallel: bool = True,
+        on_result: Optional[ResultCallback] = None,
     ) -> Dict[str, str]:
         """Fetch abstracts for multiple DOIs.
 
         Args:
             items: List of dicts with 'doi' and optional 'title'.
             parallel: Use parallel fetching (default True).
+            on_result: Optional callback called for each result as it completes.
+                       Signature: (doi: str, abstract: Optional[str]) -> None
 
         Returns:
             Dict mapping DOI to abstract.
@@ -237,7 +266,7 @@ class AbstractScraper:
                 loop = asyncio.new_event_loop()
                 asyncio.set_event_loop(loop)
                 try:
-                    return loop.run_until_complete(self._fetch_batch_async(items))
+                    return loop.run_until_complete(self._fetch_batch_async(items, on_result))
                 finally:
                     loop.close()
             except Exception as e:
@@ -253,13 +282,18 @@ class AbstractScraper:
             if not doi:
                 continue
             title = item.get("title")
-            logger.info("Fetching [%d/%d]: %s", idx, total, doi)
+            logger.info("Sequential [%d/%d]: %s", idx, total, doi)
             abstract = self.fetch_abstract(doi, title)
             if abstract:
                 results[doi] = abstract
-                logger.info("Fetching [%d/%d]: success (%d chars)", idx, total, len(abstract))
+                logger.info("Sequential [%d/%d]: success (%d chars)", idx, total, len(abstract))
             else:
-                logger.info("Fetching [%d/%d]: no abstract found", idx, total)
+                logger.info("Sequential [%d/%d]: no abstract found", idx, total)
+
+            # Call callback for sequential mode too
+            if on_result:
+                on_result(doi, abstract)
+
         return results
 
     def close(self):
@@ -274,6 +308,7 @@ PlaywrightManager = StealthBrowser
 
 __all__ = [
     "AbstractScraper",
+    "ResultCallback",
     "UniversalScraper",
     "PlaywrightManager",
 ]
