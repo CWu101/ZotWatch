@@ -1,7 +1,6 @@
 """Crossref source implementation."""
 
 import csv
-import json
 import logging
 from datetime import datetime, timedelta, timezone
 from pathlib import Path
@@ -34,12 +33,10 @@ logger = logging.getLogger(__name__)
 class CrossrefSource(BaseSource):
     """Crossref journal articles source."""
 
-    def __init__(self, settings: Settings, profile_path: Optional[Path] = None):
+    def __init__(self, settings: Settings):
         super().__init__(settings)
         self.config = settings.sources.crossref
         self.session = requests.Session()
-        self.profile_path = profile_path
-        self._top_venues: Optional[List[str]] = None
 
     @property
     def name(self) -> str:
@@ -48,38 +45,6 @@ class CrossrefSource(BaseSource):
     @property
     def enabled(self) -> bool:
         return self.config.enabled
-
-    @property
-    def top_venues(self) -> List[str]:
-        """Load top venues from profile."""
-        if self._top_venues is not None:
-            return self._top_venues
-
-        if not self.profile_path or not self.profile_path.exists():
-            self._top_venues = []
-            return self._top_venues
-
-        try:
-            data = json.loads(self.profile_path.read_text(encoding="utf-8"))
-        except Exception as exc:
-            logger.warning("Failed to load profile when reading top venues: %s", exc)
-            self._top_venues = []
-            return self._top_venues
-
-        venues: List[str] = []
-        for entry in data.get("top_venues", []):
-            name = entry.get("venue") if isinstance(entry, dict) else None
-            if name:
-                venues.append(name)
-
-        unique = list(dict.fromkeys(venues)) if venues else []
-        self._top_venues = unique[:20]
-        return self._top_venues
-
-    def set_profile_path(self, path: Path) -> None:
-        """Set profile path for top venues loading."""
-        self.profile_path = path
-        self._top_venues = None
 
     def fetch(self, days_back: int | None = None) -> List[CandidateWork]:
         """Fetch Crossref works with publisher filtering and abstract requirement."""
@@ -93,20 +58,15 @@ class CrossrefSource(BaseSource):
             issns = self._load_issn_whitelist()
             if issns:
                 logger.info("Using ISSN whitelist with %d journals", len(issns))
-                results = self._fetch_by_issn(days_back, issns, max_results)
-                results.extend(self._fetch_top_venues(days_back))
-                return results
+                return self._fetch_by_issn(days_back, issns, max_results)
 
         # Fall back to publisher filter
         member_ids = self._get_member_ids()
         if member_ids:
             logger.info("Filtering by publishers: %s", ", ".join(self.config.publishers))
-            results = self._fetch_with_filters(days_back, member_ids, max_results)
-        else:
-            results = self._fetch_general(days_back)
+            return self._fetch_with_filters(days_back, member_ids, max_results)
 
-        results.extend(self._fetch_top_venues(days_back))
-        return results
+        return self._fetch_general(days_back)
 
     def _load_issn_whitelist(self) -> List[str]:
         """Load ISSN whitelist from CSV file."""
@@ -310,45 +270,6 @@ class CrossrefSource(BaseSource):
                 results.append(work)
 
         logger.info("Fetched %d Crossref works", len(results))
-        return results
-
-    def _fetch_top_venues(self, days_back: int) -> List[CandidateWork]:
-        """Fetch works from top venues."""
-        if not self.top_venues:
-            return []
-
-        since = datetime.now(timezone.utc) - timedelta(days=days_back)
-        results: List[CandidateWork] = []
-
-        for venue in self.top_venues:
-            params = {
-                "filter": f"from-created-date:{since.date().isoformat()},container-title:{venue}",
-                "sort": "created",
-                "order": "desc",
-                "rows": 100,
-                "mailto": self.config.mailto,
-                "select": "DOI,title,author,abstract,container-title,created,URL,type,is-referenced-by-count",
-            }
-            try:
-                resp = self.session.get(
-                    "https://api.crossref.org/works",
-                    params=params,
-                    timeout=30,
-                )
-                resp.raise_for_status()
-            except Exception as exc:
-                logger.warning("Failed to fetch Crossref top venue %s: %s", venue, exc)
-                continue
-
-            message = resp.json().get("message", {})
-            for item in message.get("items", []):
-                work = self._parse_crossref_item(item, venue_override=venue)
-                if work:
-                    work.extra["source"] = "top_venue"
-                    results.append(work)
-
-        if results:
-            logger.info("Fetched %d additional works from top venues", len(results))
         return results
 
     def _parse_crossref_item(

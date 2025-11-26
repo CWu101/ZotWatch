@@ -95,7 +95,6 @@ class ScoreWeights(BaseModel):
     similarity: float = 0.50
     recency: float = 0.15
     citations: float = 0.15
-    journal_quality: float = 0.09
     author_bonus: float = 0.02
     venue_bonus: float = 0.09
 

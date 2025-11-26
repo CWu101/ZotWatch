@@ -2,11 +2,8 @@ name: Daily Watch & RSS
 
 on:
   schedule:
-    - cron: "5 22 * * *"  #北京时间6点05运行
-  push:
-    branches:
-      - main
-  workflow_dispatch:
+    - cron: "5 22 * * *"  # UTC 22:05 = 北京时间 6:05
+  workflow_dispatch:  # 支持手动触发
 
 jobs:
   watch:
@@ -15,41 +12,73 @@ jobs:
       contents: write
       pages: write
       id-token: write
+
     env:
+      # Required
       ZOTERO_API_KEY: ${{ secrets.ZOTERO_API_KEY }}
       ZOTERO_USER_ID: ${{ secrets.ZOTERO_USER_ID }}
       VOYAGE_API_KEY: ${{ secrets.VOYAGE_API_KEY }}
-      OPENALEX_MAILTO: ${{ secrets.OPENALEX_MAILTO }}
+      # Optional
       CROSSREF_MAILTO: ${{ secrets.CROSSREF_MAILTO }}
+      SEMANTIC_SCHOLAR_API_KEY: ${{ secrets.SEMANTIC_SCHOLAR_API_KEY }}
+      OPENROUTER_API_KEY: ${{ secrets.OPENROUTER_API_KEY }}
+      MOONSHOT_API_KEY: ${{ secrets.MOONSHOT_API_KEY }}
+
     steps:
-      - uses: actions/checkout@v4
-      - uses: astral-sh/setup-uv@v5
+      - name: Checkout repository
+        uses: actions/checkout@v4
+
+      - name: Setup uv
+        uses: astral-sh/setup-uv@v5
         with:
           enable-cache: true
-      - name: Ensure data directories
+
+      - name: Ensure directories
         run: mkdir -p data reports
-      - name: Compute cache key suffix
-        id: cache-key
-        run: echo "CACHE_KEY=$(date +%Y%m)" >> $GITHUB_ENV
-      - name: Restore profile cache
-        id: cache-profile
+
+      # Cache profile data (embeddings, FAISS index, etc.)
+      - name: Cache profile data
         uses: actions/cache@v4
         with:
           path: |
             data/profile.sqlite
             data/faiss.index
             data/profile.json
-          key: profile-${{ env.CACHE_KEY }}
-      - run: uv sync
-      - name: Build Zotero profile
-        if: steps.cache-profile.outputs.cache-hit != 'true'
-        run: uv run python -m src.cli profile --full
-      - run: uv run python -m src.cli watch --rss --top 20
+            data/embeddings.sqlite
+            data/metadata_cache.sqlite
+          key: profile-${{ hashFiles('config/config.yaml') }}-${{ github.run_number }}
+          restore-keys: |
+            profile-${{ hashFiles('config/config.yaml') }}-
+            profile-
+
+      # Cache Playwright browsers
+      - name: Cache Playwright browsers
+        uses: actions/cache@v4
+        with:
+          path: ~/.cache/ms-playwright
+          key: playwright-firefox-${{ runner.os }}-${{ hashFiles('pyproject.toml') }}
+          restore-keys: |
+            playwright-firefox-${{ runner.os }}-
+
+      - name: Install dependencies
+        run: uv sync
+
+      - name: Install Playwright Firefox
+        run: uv run playwright install firefox --with-deps
+
+      - name: Run ZotWatch
+        run: uv run zotwatch watch --top 30
+
+      # Deploy to GitHub Pages
       - name: Prepare Pages
         run: |
           mkdir -p public
           cp -r reports/* public/ || true
-      - uses: actions/upload-pages-artifact@v3
+
+      - name: Upload Pages artifact
+        uses: actions/upload-pages-artifact@v3
         with:
           path: ./public
-      - uses: actions/deploy-pages@v4
+
+      - name: Deploy to GitHub Pages
+        uses: actions/deploy-pages@v4

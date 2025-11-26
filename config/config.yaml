@@ -52,7 +52,6 @@ scoring:
     similarity: 0.50
     recency: 0.15
     citations: 0.15
-    journal_quality: 0.09
     author_bonus: 0.02
     venue_bonus: 0.09
   thresholds:

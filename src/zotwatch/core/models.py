@@ -100,8 +100,6 @@ class RankedWork(CandidateWork):
     metric_score: float
     author_bonus: float
     venue_bonus: float
-    journal_quality: float = 1.0
-    journal_sjr: Optional[float] = None
     label: str
     summary: Optional["PaperSummary"] = None
 

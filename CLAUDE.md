@@ -70,7 +70,6 @@ src/zotwatch/
 - `data/faiss.index`: FAISS vector index for similarity search
 - `data/profile.json`: Profile summary with top authors, venues, and centroid vector
 - `data/embeddings.sqlite`: Embedding cache for reusing computed vectors
-- `data/journal_metrics.csv`: Optional SJR journal metrics for quality scoring
 
 ### Configuration Files (config/)
 

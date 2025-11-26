@@ -157,25 +157,61 @@ llm:
 
 ## GitHub Actions 自动运行
 
+通过 GitHub Actions 实现每日自动监测和推送，无需本地运行。
+
 ### 1. Fork 仓库
+
+点击 GitHub 页面右上角的 **Fork** 按钮。
 
 ### 2. 配置 Secrets
 
-在 **Settings → Secrets and variables → Actions** 添加：
-- `ZOTERO_API_KEY`
-- `ZOTERO_USER_ID`
-- `VOYAGE_API_KEY`
-- `OPENROUTER_API_KEY`（可选，用于 AI 摘要）
-- `CROSSREF_MAILTO`（可选）
+在你的仓库中进入 **Settings → Secrets and variables → Actions → New repository secret**，添加以下密钥：
+
+| Secret 名称 | 必需 | 说明 |
+|------------|------|------|
+| `ZOTERO_API_KEY` | ✅ | [Zotero API 密钥](https://www.zotero.org/settings/keys) |
+| `ZOTERO_USER_ID` | ✅ | Zotero 用户 ID（在 API 密钥页面可见） |
+| `VOYAGE_API_KEY` | ✅ | [Voyage AI API 密钥](https://dash.voyageai.com/) |
+| `CROSSREF_MAILTO` | 推荐 | 你的邮箱，用于 Crossref 礼貌池 |
+| `SEMANTIC_SCHOLAR_API_KEY` | 可选 | [Semantic Scholar API 密钥](https://www.semanticscholar.org/product/api)，提高摘要获取成功率 |
+| `OPENROUTER_API_KEY` | 可选 | [OpenRouter API 密钥](https://openrouter.ai/keys)，用于 AI 摘要 |
+| `MOONSHOT_API_KEY` | 可选 | [Kimi API 密钥](https://platform.moonshot.cn/)，用于 AI 摘要（与 OpenRouter 二选一） |
 
 ### 3. 启用 GitHub Pages
 
-**Settings → Pages → Source** 设为 **GitHub Actions**。
+1. 进入 **Settings → Pages**
+2. **Source** 选择 **GitHub Actions**
+3. 保存设置
 
-### 4. 运行
+### 4. 首次运行
 
-- Workflow 默认每天自动运行
-- RSS 地址：`https://[username].github.io/ZotWatch/feed.xml`
+1. 进入 **Actions** 标签页
+2. 点击左侧 **Daily Watch & RSS**
+3. 点击 **Run workflow** 手动触发首次运行
+4. 首次运行约需 5-10 分钟（构建画像 + 安装浏览器）
+
+### 5. 访问结果
+
+运行成功后，可通过以下地址访问：
+
+- **RSS 订阅**：`https://[username].github.io/ZotWatch/feed.xml`
+- **HTML 报告**：`https://[username].github.io/ZotWatch/report.html`
+
+### 6. 自动运行
+
+- Workflow 默认每天北京时间 **6:05** 自动运行
+- 可在 `.github/workflows/daily_watch.yml` 中修改 cron 表达式调整时间
+- 支持随时手动触发
+
+### 运行时间说明
+
+| 阶段 | 首次运行 | 后续运行 |
+|------|---------|---------|
+| 依赖安装 | ~1 分钟 | ~10 秒（有缓存） |
+| Playwright 安装 | ~2 分钟 | ~10 秒（有缓存） |
+| 画像构建 | ~3-5 分钟 | 跳过（有缓存） |
+| 候选抓取 + 评分 | ~2-3 分钟 | ~2-3 分钟 |
+| **总计** | **~10 分钟** | **~3-5 分钟** |
 
 ## 常见问题
 

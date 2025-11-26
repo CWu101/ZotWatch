@@ -88,14 +88,29 @@ _FALLBACK_TEMPLATE = """<!DOCTYPE html>
             </div>
             <div class="ml-4 text-right text-sm text-text-secondary flex-shrink-0">
               <div class="font-medium">{{ work.published.strftime('%Y-%m-%d') if work.published else '未知' }}</div>
-              <div class="text-xs text-text-secondary max-w-[150px] truncate" title="{{ work.venue or '' }}">{{ work.venue or '未知来源' }}</div>
+              <div class="text-xs text-text-secondary max-w-[150px] break-words leading-tight" title="{{ work.venue or '' }}">{{ work.venue or '未知来源' }}</div>
             </div>
           </div>
 
           <!-- 作者 -->
-          <p class="text-sm text-text-secondary mb-4">
+          <p class="text-sm text-text-secondary mb-3">
             {{ work.authors[:5] | join('，') }}{% if work.authors|length > 5 %} 等{% endif %}
           </p>
+
+          <!-- DOI 和基本信息 -->
+          <div class="flex flex-wrap gap-x-4 gap-y-1 text-xs text-text-secondary mb-4">
+            {% if work.doi %}
+            <span class="flex items-center">
+              <span class="font-medium mr-1">DOI:</span>
+              <a href="https://doi.org/{{ work.doi }}" target="_blank" rel="noopener" class="text-accent hover:text-accent-hover hover:underline">{{ work.doi }}</a>
+            </span>
+            {% elif work.identifier %}
+            <span class="flex items-center">
+              <span class="font-medium mr-1">ID:</span>
+              <span>{{ work.identifier }}</span>
+            </span>
+            {% endif %}
+          </div>
 
           <!-- 原文摘要 -->
           {% if work.abstract %}
@@ -166,9 +181,6 @@ _FALLBACK_TEMPLATE = """<!DOCTYPE html>
             <div class="flex flex-wrap gap-3 text-xs">
               <span class="px-2 py-1 bg-bg-hover rounded text-text-secondary">相似度 {{ '%.2f'|format(work.similarity) }}</span>
               <span class="px-2 py-1 bg-bg-hover rounded text-text-secondary">时效性 {{ '%.2f'|format(work.recency_score) }}</span>
-              {% if work.journal_sjr %}
-              <span class="px-2 py-1 bg-bg-hover rounded text-text-secondary">SJR {{ '%.2f'|format(work.journal_sjr) }}</span>
-              {% endif %}
               {% if work.author_bonus > 0 %}
               <span class="px-2 py-1 bg-green-100 rounded text-green-700">关注作者</span>
               {% endif %}

@@ -1,12 +1,11 @@
 """Scoring and ranking pipeline."""
 
-import csv
 import json
 import logging
 from dataclasses import dataclass
 from datetime import datetime, timezone
 from pathlib import Path
-from typing import Dict, List, Optional, Tuple
+from typing import List, Optional
 
 import numpy as np
 
@@ -79,7 +78,6 @@ class WorkRanker:
         )
         self.index = FaissIndex.load(self.artifacts.index_path)
         self.profile = self._load_profile()
-        self.journal_metrics = self._load_journal_metrics()
 
     def _load_profile(self) -> dict:
         """Load profile JSON."""
@@ -87,31 +85,6 @@ class WorkRanker:
         if not path.exists():
             raise FileNotFoundError("Profile JSON not found; run profile build first.")
         return json.loads(path.read_text(encoding="utf-8"))
-
-    def _load_journal_metrics(self) -> Dict[str, float]:
-        """Load journal SJR metrics."""
-        path = self.base_dir / "data" / "journal_metrics.csv"
-        metrics: Dict[str, float] = {}
-        if not path.exists():
-            logger.warning("Journal metrics file not found: %s", path)
-            return metrics
-        try:
-            with path.open("r", encoding="utf-8") as fh:
-                reader = csv.DictReader(fh)
-                for row in reader:
-                    title = (row.get("title") or "").strip().lower()
-                    sjr = row.get("sjr")
-                    if not title or not sjr:
-                        continue
-                    try:
-                        metrics[title] = float(sjr)
-                    except ValueError:
-                        continue
-        except Exception as exc:
-            logger.warning("Failed to load journal metrics: %s", exc)
-            return {}
-        logger.info("Loaded %d journal SJR entries", len(metrics))
-        return metrics
 
     def rank(self, candidates: List[CandidateWork]) -> List[RankedWork]:
         """Rank candidates and return sorted results."""
@@ -132,7 +105,6 @@ class WorkRanker:
             similarity = float(distance[0]) if distance.size else 0.0
             recency_score = _compute_recency(candidate.published, self.settings)
             citation_score = _compute_citation_score(candidate)
-            journal_quality, journal_sjr = _journal_quality_score(candidate.venue, self.journal_metrics)
             author_bonus = _bonus(candidate.authors, self.settings.scoring.whitelist_authors)
             venue_bonus = _bonus(
                 [candidate.venue] if candidate.venue else [],
@@ -143,7 +115,6 @@ class WorkRanker:
                 similarity * weights.similarity
                 + recency_score * weights.recency
                 + citation_score * weights.citations
-                + journal_quality * weights.journal_quality
                 + author_bonus * weights.author_bonus
                 + venue_bonus * weights.venue_bonus
             )
@@ -163,8 +134,6 @@ class WorkRanker:
                     metric_score=citation_score,
                     author_bonus=author_bonus,
                     venue_bonus=venue_bonus,
-                    journal_quality=journal_quality,
-                    journal_sjr=journal_sjr,
                     label=label,
                 )
             )
@@ -180,20 +149,6 @@ def _bonus(values: List[str], whitelist: List[str]) -> float:
         if value and value.lower() in whitelist_lower:
             return 1.0
     return 0.0
-
-
-def _journal_quality_score(venue: Optional[str], metrics: Dict[str, float]) -> Tuple[float, Optional[float]]:
-    """Calculate journal quality score."""
-    if not venue:
-        return 1.0, None
-    key = venue.strip().lower()
-    value = metrics.get(key)
-    if value is None:
-        return 1.0, None
-    score = float(np.log1p(value))
-    if score < 1.0:
-        score = 1.0
-    return score, float(value)
 
 
 def _compute_recency(published: datetime | None, settings: Settings) -> float:
