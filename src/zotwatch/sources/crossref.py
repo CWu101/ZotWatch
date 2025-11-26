@@ -12,7 +12,7 @@ import requests
 from zotwatch.config.settings import Settings
 from zotwatch.core.models import CandidateWork
 
-from .base import BaseSource, SourceRegistry, clean_html, clean_title, parse_date
+from .base import BaseSource, SourceRegistry, clean_html, clean_title, is_non_article_title, parse_date
 
 # Crossref member IDs for major publishers (aligned with OpenAlex publisher list)
 # Verified via https://api.crossref.org/members?query=<name> and DOI prefix lookups
@@ -361,6 +361,13 @@ class CrossrefSource(BaseSource):
         if not title:
             return None
 
+        # Get venue for filtering
+        venue = venue_override or (item.get("container-title") or [None])[0]
+
+        # Filter out non-article entries (TOC, publication info, etc.)
+        if is_non_article_title(title, venue):
+            return None
+
         doi = item.get("DOI")
         authors = [" ".join(filter(None, [p.get("given"), p.get("family")])).strip() for p in item.get("author", [])]
 
@@ -373,7 +380,7 @@ class CrossrefSource(BaseSource):
             doi=doi,
             url=item.get("URL"),
             published=parse_date(item.get("created", {}).get("date-time")),
-            venue=venue_override or (item.get("container-title") or [None])[0],
+            venue=venue,
             metrics={"is-referenced-by": float(item.get("is-referenced-by-count", 0))},
             extra={"type": item.get("type")},
         )

@@ -1,15 +1,19 @@
 """Processing pipeline components."""
 
+from .dedupe import DedupeEngine
+from .enrich import AbstractEnricher, EnrichmentStats, enrich_candidates
+from .fetch import fetch_candidates
 from .ingest import ingest_zotero
 from .profile import ProfileBuilder
-from .fetch import fetch_candidates
-from .dedupe import DedupeEngine
 from .score import WorkRanker
 
 __all__ = [
     "ingest_zotero",
     "ProfileBuilder",
     "fetch_candidates",
+    "AbstractEnricher",
+    "EnrichmentStats",
+    "enrich_candidates",
     "DedupeEngine",
     "WorkRanker",
 ]

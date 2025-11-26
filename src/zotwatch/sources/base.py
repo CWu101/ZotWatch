@@ -127,6 +127,69 @@ def clean_html(value: str | None) -> str | None:
     return text or None
 
 
+# Patterns for non-article entries (journal metadata pages)
+_NON_ARTICLE_PATTERNS = [
+    # Exact match patterns (case-insensitive)
+    r"^table of contents$",
+    r"^masthead$",
+    r"^editorial board$",
+    r"^errat(a|um)$",
+    r"^correction(s)?$",
+    r"^retraction$",
+    r"^connect\. support\. inspire\.$",  # IEEE slogan
+    # Contains patterns
+    r"information for authors",
+    r"publication information",
+    r"author guidelines",
+    r"instructions for authors",
+    r"guide for authors",
+    # Journal name only patterns (matches "IEEE Transactions on X" alone)
+    r"^ieee transactions on [a-z\s]+$",
+    r"^ieee journal of [a-z\s]+$",
+    r"^proceedings of the ieee$",
+    r"^ieee [a-z\s]+ magazine$",
+]
+
+# Compile patterns for efficiency
+_NON_ARTICLE_REGEX = [re.compile(p, re.IGNORECASE) for p in _NON_ARTICLE_PATTERNS]
+
+
+def is_non_article_title(title: str, venue: Optional[str] = None) -> bool:
+    """Check if title indicates a non-article entry (journal metadata page).
+
+    IEEE and other publishers register DOIs for non-article content like:
+    - Table of Contents
+    - Publication Information
+    - Information for Authors
+    - Journal masthead
+    - Connect. Support. Inspire. (IEEE slogan)
+
+    Args:
+        title: Paper title to check.
+        venue: Optional venue/journal name for comparison.
+
+    Returns:
+        True if title indicates non-article content.
+    """
+    if not title:
+        return True
+
+    title_clean = title.strip()
+
+    # Check against known patterns
+    for pattern in _NON_ARTICLE_REGEX:
+        if pattern.search(title_clean):
+            logger.debug("Filtered non-article title: %s (matched pattern)", title_clean)
+            return True
+
+    # Check if title is just the venue name
+    if venue and title_clean.lower() == venue.lower():
+        logger.debug("Filtered non-article title: %s (equals venue name)", title_clean)
+        return True
+
+    return False
+
+
 __all__ = [
     "BaseSource",
     "SourceRegistry",
@@ -135,4 +198,5 @@ __all__ = [
     "ensure_aware",
     "parse_date",
     "clean_html",
+    "is_non_article_title",
 ]

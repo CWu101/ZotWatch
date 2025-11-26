@@ -20,6 +20,7 @@ from zotwatch.output import render_html, write_rss
 from zotwatch.output.push import ZoteroPusher
 from zotwatch.pipeline import DedupeEngine, ProfileBuilder, WorkRanker
 from zotwatch.pipeline.fetch import CandidateFetcher
+from zotwatch.pipeline.enrich import AbstractEnricher
 from zotwatch.sources.zotero import ZoteroIngestor
 from zotwatch.utils.logging import setup_logging
 
@@ -244,6 +245,26 @@ def watch(
     fetcher = CandidateFetcher(settings, base_dir)
     candidates = fetcher.fetch_all()
     click.echo(f"  Found {len(candidates)} candidates")
+
+    # Enrich missing abstracts
+    if settings.sources.semantic_scholar.enabled:
+        click.echo("Enriching missing abstracts via Semantic Scholar...")
+        enricher = AbstractEnricher(settings, base_dir)
+        candidates, enrich_stats = enricher.enrich(candidates)
+        # Display before/after comparison
+        click.echo(
+            f"  Before: {enrich_stats.with_abstract}/{enrich_stats.total_candidates} "
+            f"({enrich_stats.original_rate:.1f}%) have abstracts"
+        )
+        click.echo(
+            f"  After:  {enrich_stats.with_abstract + enrich_stats.enriched}/{enrich_stats.total_candidates} "
+            f"({enrich_stats.final_rate:.1f}%) have abstracts"
+        )
+        if enrich_stats.enriched > 0 or enrich_stats.failed > 0:
+            click.echo(
+                f"  Result: +{enrich_stats.enriched} enriched (cache: {enrich_stats.cache_hits}, "
+                f"API: {enrich_stats.api_fetched}, failed: {enrich_stats.failed})"
+            )
 
     # Deduplicate
     dedupe = DedupeEngine(storage)

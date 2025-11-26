@@ -54,11 +54,38 @@ class ArxivConfig(BaseModel):
     max_results: int = 500
 
 
+class ScraperConfig(BaseModel):
+    """Universal scraper configuration for LLM-based abstract extraction."""
+
+    enabled: bool = True
+    rate_limit_delay: float = 2.0  # Seconds between scrape requests
+    timeout: int = 30000  # Page load timeout in milliseconds
+    max_html_chars: int = 15000  # Max HTML chars to send to LLM
+    llm_max_tokens: int = 1024  # Max tokens for LLM response
+    llm_temperature: float = 0.1  # LLM temperature for extraction
+
+
+class SemanticScholarConfig(BaseModel):
+    """Semantic Scholar enrichment configuration."""
+
+    enabled: bool = True
+    api_key: str = ""  # Optional, uses shared rate limit without key
+    timeout: float = 30.0
+    max_retries: int = 3
+    backoff_factor: float = 2.0
+    rate_limit_delay: float = 1.0  # seconds between requests
+    batch_size: int = 100  # Papers per batch (max 500)
+    cache_ttl_days: int = 30  # Cache TTL for abstracts
+    # Universal scraper fallback (uses Firefox + LLM extraction)
+    scraper: ScraperConfig = Field(default_factory=ScraperConfig)
+
+
 class SourcesConfig(BaseModel):
     """Data sources configuration."""
 
     crossref: CrossRefConfig = Field(default_factory=CrossRefConfig)
     arxiv: ArxivConfig = Field(default_factory=ArxivConfig)
+    semantic_scholar: SemanticScholarConfig = Field(default_factory=SemanticScholarConfig)
 
 
 # Scoring Configuration
@@ -196,6 +223,8 @@ __all__ = [
     "ZoteroConfig",
     "ZoteroApiConfig",
     "SourcesConfig",
+    "ScraperConfig",
+    "SemanticScholarConfig",
     "ScoringConfig",
     "EmbeddingConfig",
     "LLMConfig",

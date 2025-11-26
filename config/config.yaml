@@ -16,7 +16,7 @@ sources:
       - "cs.CV"   # Computer Vision and Pattern Recognition
       - "cs.AI"   # Artificial Intelligence
       - "stat.ML" # Machine Learning (Statistics)
-    days_back: 1
+    days_back: 2
     max_results: 3000
   crossref:
     enabled: true
@@ -29,6 +29,23 @@ sources:
       - "Springer Nature"
       - "Elsevier BV"
       - "Multidisciplinary Digital Publishing Institute"
+  # Semantic Scholar enrichment for missing abstracts
+  semantic_scholar:
+    enabled: true
+    api_key: "${SEMANTIC_SCHOLAR_API_KEY}"  # Optional, get free key at semanticscholar.org/product/api
+    timeout: 30.0
+    max_retries: 3
+    rate_limit_delay: 1.0  # seconds between requests
+    batch_size: 100
+    cache_ttl_days: 30
+    # Universal scraper fallback (Firefox + LLM extraction for any DOI)
+    scraper:
+      enabled: true
+      rate_limit_delay: 2.0  # Seconds between scrape requests
+      timeout: 30000  # Page load timeout (ms)
+      max_html_chars: 15000  # Max HTML chars to send to LLM
+      llm_max_tokens: 1024  # Max tokens for LLM extraction response
+      llm_temperature: 0.1  # Low temperature for accurate extraction
 
 scoring:
   weights:
