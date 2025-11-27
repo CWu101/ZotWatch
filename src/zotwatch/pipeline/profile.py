@@ -82,11 +82,27 @@ class ProfileBuilder:
             full: If True, invalidate all profile embeddings and recompute.
                   If False (default), use cached embeddings where available.
         """
-        items = list(self.storage.iter_items())
-        if not items:
+        all_items = list(self.storage.iter_items())
+        if not all_items:
             raise RuntimeError("No items found in storage; run ingest before building profile.")
 
-        logger.info("Building profile from %d library items", len(items))
+        # Filter items: only include those with abstracts
+        items_with_abstract = [item for item in all_items if item.abstract]
+        items_without_abstract = len(all_items) - len(items_with_abstract)
+
+        logger.info(
+            "Library statistics: %d items with abstract, %d items without abstract",
+            len(items_with_abstract),
+            items_without_abstract,
+        )
+
+        if not items_with_abstract:
+            raise RuntimeError(
+                "No items with abstracts found in storage; profile building requires items with abstracts."
+            )
+
+        items = items_with_abstract
+        logger.info("Building profile from %d items (with abstracts)", len(items))
 
         # If full rebuild requested and cache is available, invalidate profile embeddings
         if full and self._cache is not None:
