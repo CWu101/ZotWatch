@@ -56,9 +56,10 @@ def with_retry(
                     time.sleep(delay)
                     delay *= backoff_factor
 
-            if last_exception:
-                raise last_exception
-            raise RuntimeError("All retry attempts failed")
+            # All retries exhausted - last_exception is guaranteed to be set
+            # since we only reach here after catching retryable exceptions
+            assert last_exception is not None
+            raise last_exception
 
         return wrapper
 

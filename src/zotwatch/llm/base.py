@@ -1,18 +1,9 @@
 """LLM provider base classes."""
 
 from abc import ABC, abstractmethod
-from dataclasses import dataclass
 from typing import List, Optional
 
-
-@dataclass
-class LLMResponse:
-    """Response from LLM provider."""
-
-    content: str
-    model: str
-    tokens_used: int
-    cached: bool = False
+from zotwatch.core.protocols import LLMResponse
 
 
 class BaseLLMProvider(ABC):

@@ -1,7 +1,7 @@
 """arXiv source implementation."""
 
 import logging
-from datetime import datetime, timedelta, timezone
+from datetime import timedelta
 from typing import Dict, List
 
 import feedparser
@@ -9,6 +9,7 @@ import requests
 
 from zotwatch.config.settings import Settings
 from zotwatch.core.models import CandidateWork
+from zotwatch.utils.datetime import utc_today_start
 
 from .base import BaseSource, SourceRegistry, clean_title, parse_date
 
@@ -39,8 +40,10 @@ class ArxivSource(BaseSource):
 
         categories = self.config.categories
         categories_set = set(categories)  # For fast lookup
-        to_date = datetime.now(timezone.utc)
-        from_date = to_date - timedelta(days=days_back)
+        # Use today's UTC midnight as reference point for consistent date range
+        today = utc_today_start()
+        from_date = today - timedelta(days=days_back)
+        to_date = today  # Format string will use YYYYMMDD2359, including today
         max_results = self.config.max_results
 
         # Use submittedDate filter for date range

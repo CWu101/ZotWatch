@@ -69,8 +69,4 @@ class VoyageEmbedding(BaseEmbeddingProvider):
         return embeddings / norms
 
 
-# Alias for backward compatibility
-TextVectorizer = VoyageEmbedding
-
-
-__all__ = ["VoyageEmbedding", "TextVectorizer"]
+__all__ = ["VoyageEmbedding"]

@@ -55,11 +55,10 @@ class ArxivConfig(BaseModel):
 
 
 class ScraperConfig(BaseModel):
-    """Abstract scraper configuration with parallel fetching and rule-based extraction."""
+    """Abstract scraper configuration with sequential fetching and rule-based extraction."""
 
     enabled: bool = True
-    max_concurrent: int = 3  # Parallel browser instances
-    rate_limit_delay: float = 1.0  # Seconds between requests (sequential mode)
+    rate_limit_delay: float = 1.0  # Seconds between requests
     timeout: int = 60000  # Page load timeout in milliseconds
     max_retries: int = 2  # Maximum retry attempts per URL
     max_html_chars: int = 15000  # Max HTML chars to send to LLM

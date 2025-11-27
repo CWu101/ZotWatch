@@ -1,8 +1,7 @@
 """HTML report generation."""
 
 import logging
-from datetime import datetime
-from zoneinfo import ZoneInfo
+from datetime import datetime, timezone
 from pathlib import Path
 from typing import List, Optional
 
@@ -49,7 +48,7 @@ _FALLBACK_TEMPLATE = """<!DOCTYPE html>
   <header class="bg-bg-card border-b border-border-color">
     <div class="max-w-4xl mx-auto px-4 py-6">
       <h1 class="text-2xl font-bold text-text-primary">ZotWatch 文献推荐</h1>
-      <p class="text-sm text-text-secondary mt-1">共 {{ works|length }} 篇论文 · 生成于 {{ generated_at.strftime('%Y年%m月%d日 %H:%M') }} (Asia/Shanghai)</p>
+      <p class="text-sm text-text-secondary mt-1">共 {{ works|length }} 篇论文 · 生成于 {{ generated_at.strftime('%Y-%m-%d %H:%M') }} UTC</p>
     </div>
   </header>
 
@@ -269,7 +268,7 @@ def render_html(
     Returns:
         Path to written HTML file
     """
-    generated_at = datetime.now(ZoneInfo("Asia/Shanghai"))
+    generated_at = datetime.now(timezone.utc)
 
     # Try to load external template
     if template_dir and (template_dir / template_name).exists():

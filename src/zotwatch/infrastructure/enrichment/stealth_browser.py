@@ -221,8 +221,8 @@ class StealthBrowser:
 
             # Try to find Turnstile widget container
             selectors = [
-                'div.cf-turnstile',
-                '[data-turnstile-widget]',
+                "div.cf-turnstile",
+                "[data-turnstile-widget]",
                 'iframe[src*="challenges.cloudflare.com"]',
             ]
 
@@ -296,9 +296,7 @@ class StealthBrowser:
                 return False
 
             # Get iframe element and its bounding box
-            iframe_element = await page.query_selector(
-                'iframe[src*="challenges.cloudflare.com"]'
-            )
+            iframe_element = await page.query_selector('iframe[src*="challenges.cloudflare.com"]')
             if not iframe_element:
                 logger.warning("Could not find iframe element")
                 return False
@@ -475,9 +473,7 @@ class StealthBrowser:
             return None, None
 
         try:
-            return cls._run_async(
-                cls._fetch_page_async(browser, context, url, timeout, max_retries)
-            )
+            return cls._run_async(cls._fetch_page_async(browser, context, url, timeout, max_retries))
         except Exception as e:
             logger.warning("Failed to fetch %s: %s", url, e)
             return None, None

@@ -32,7 +32,6 @@ sources:
   # Abstract scraper for enriching missing abstracts (Camoufox + rule-based + LLM fallback)
   scraper:
     enabled: true
-    max_concurrent: 3  # Parallel browser instances
     rate_limit_delay: 1.0  # Seconds between requests
     timeout: 60000  # Page load timeout (ms)
     max_retries: 2  # Retry attempts per URL

@@ -73,14 +73,16 @@ PUBLISHER_CONFIGS: Dict[str, Dict] = {
             ("name", "description"),
         ],
         "selectors": [
-            # ScienceDirect abstract sections
-            r'<div[^>]*class=["\'][^"\']*abstract[^"\']*author[^"\']*["\'][^>]*>(.*?)</div>',
-            r'<div[^>]*class=["\'][^"\']*author[^"\']*abstract[^"\']*["\'][^>]*>(.*?)</div>',
-            r'<div[^>]*id=["\']abs0\d+["\'][^>]*>(.*?)</div>',
-            r'<div[^>]*id=["\']abss?\d*["\'][^>]*>(.*?)</div>',
+            # ScienceDirect abstract sections - order matters!
+            # 1. Preview pages: "abstract author" with sp[N] content div
+            r'<div[^>]*class=["\']abstract author["\'][^>]*>.*?<h2[^>]*>Abstract</h2>.*?<div[^>]*id=["\']sp\d+["\'][^>]*>(.*?)</div>',
+            # 2. Preview pages: "abstract author" with abss[N] content div
+            r'<div[^>]*class=["\']abstract author["\'][^>]*>.*?<h2[^>]*>Abstract</h2>.*?<div[^>]*id=["\']abss\d+["\'][^>]*>(.*?)</div>',
+            # 3. Full article pages: "abstract author" with u-margin-s-bottom content div (dynamic IDs like d1e####)
+            r'<div[^>]*class=["\']abstract author["\'][^>]*>.*?<h2[^>]*>Abstract</h2>.*?<div[^>]*class=["\']u-margin-s-bottom["\'][^>]*>(.*?)</div>',
+            # 4. Legacy patterns for other ScienceDirect layouts
+            r'<div[^>]*id=["\']abs000\d["\'][^>]*>(.*?)</div>',
             r'<section[^>]*id=["\']abstracts?["\'][^>]*>.*?<div[^>]*>(.*?)</div>',
-            r'<div[^>]*class=["\'][^"\']*abstract[^"\']*["\'][^>]*>(.*?)</div>',
-            r'<div[^>]*id=["\']abstracts?["\'][^>]*>(.*?)</div>',
         ],
     },
     "spie": {

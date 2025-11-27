@@ -8,6 +8,12 @@ def utc_now() -> datetime:
     return datetime.now(timezone.utc)
 
 
+def utc_today_start() -> datetime:
+    """Get start of today (midnight) in UTC."""
+    now = datetime.now(timezone.utc)
+    return now.replace(hour=0, minute=0, second=0, microsecond=0)
+
+
 def ensure_isoformat(dt: datetime | None) -> str | None:
     """Convert datetime to ISO 8601 string."""
     if dt is None:
@@ -52,6 +58,7 @@ def parse_date(value) -> datetime | None:
 
 __all__ = [
     "utc_now",
+    "utc_today_start",
     "ensure_isoformat",
     "iso_to_datetime",
     "ensure_aware",

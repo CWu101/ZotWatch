@@ -1,7 +1,7 @@
 """Main CLI entry point using Click."""
 
 import logging
-from datetime import datetime, timedelta, timezone
+from datetime import timedelta
 from pathlib import Path
 from typing import List, Optional
 
@@ -23,6 +23,7 @@ from zotwatch.pipeline.fetch import CandidateFetcher
 from zotwatch.pipeline.enrich import AbstractEnricher
 from zotwatch.infrastructure.enrichment.cache import MetadataCache
 from zotwatch.sources.zotero import ZoteroIngestor
+from zotwatch.utils.datetime import utc_today_start
 from zotwatch.utils.logging import setup_logging
 
 logger = logging.getLogger(__name__)
@@ -353,9 +354,8 @@ def watch(
         click.echo(f"RSS feed: {rss_path}")
 
     if report:
-        report_name = "report.html"
-        if ranked and ranked[0].published:
-            report_name = f"report-{ranked[0].published:%Y%m%d}.html"
+        # Use UTC date for report filename
+        report_name = f"report-{utc_today_start():%Y%m%d}.html"
         report_path = base_dir / "reports" / report_name
         template_dir = base_dir / "templates"
         render_html(
@@ -375,7 +375,7 @@ def _filter_recent(ranked: List[RankedWork], *, days: int) -> List[RankedWork]:
     """Filter to recent papers only."""
     if days <= 0:
         return ranked
-    cutoff = datetime.now(timezone.utc) - timedelta(days=days)
+    cutoff = utc_today_start() - timedelta(days=days)
     kept = [work for work in ranked if work.published and work.published >= cutoff]
     removed = len(ranked) - len(kept)
     if removed > 0:

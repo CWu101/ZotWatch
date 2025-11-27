@@ -1,6 +1,8 @@
 """Text processing utilities for ZotWatch."""
 
+import html
 import json
+import re
 from typing import Any, Dict, Iterable, Sequence, TypeVar
 
 T = TypeVar("T")
@@ -35,9 +37,20 @@ def clean_title(value: str | None) -> str:
     return value.strip()
 
 
+def clean_html(value: str | None) -> str | None:
+    """Clean HTML tags from string."""
+    if not value:
+        return None
+    text = html.unescape(value)
+    text = re.sub(r"<[^>]+>", " ", text)
+    text = re.sub(r"\s+", " ", text).strip()
+    return text or None
+
+
 __all__ = [
     "iter_batches",
     "json_dumps",
     "chunk_dict",
     "clean_title",
+    "clean_html",
 ]

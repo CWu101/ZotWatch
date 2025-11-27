@@ -200,7 +200,7 @@ class AbstractEnricher:
     ) -> Dict[str, str]:
         """Fetch abstracts using scraper (Camoufox + rules + LLM fallback).
 
-        Uses parallel fetching with configurable concurrency (max_concurrent).
+        Uses sequential fetching with rate limiting.
         Caches each result immediately as it completes to prevent data loss.
 
         Args:
@@ -218,7 +218,6 @@ class AbstractEnricher:
 
         scraper = AbstractScraper(
             llm=self.llm,
-            max_concurrent=self.config.max_concurrent,
             rate_limit_delay=self.config.rate_limit_delay,
             timeout=self.config.timeout,
             max_retries=self.config.max_retries,
@@ -241,8 +240,8 @@ class AbstractEnricher:
                 )
 
         try:
-            # Fetch abstracts in parallel with immediate caching via callback
-            results = scraper.fetch_batch(items, parallel=True, on_result=on_result)
+            # Fetch abstracts sequentially with immediate caching via callback
+            results = scraper.fetch_batch(items, on_result=on_result)
 
             if results:
                 logger.info("Scraper: fetched %d/%d abstracts", len(results), len(dois))

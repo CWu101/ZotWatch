@@ -107,8 +107,8 @@ class LLMAbstractExtractor:
         # 3. Try div/section patterns
         patterns = [
             # H2 header patterns (ScienceDirect, Elsevier)
-            r'<h2[^>]*>\s*Abstract\s*</h2>\s*(.*?)</div',
-            r'<h2[^>]*>\s*Abstract\s*</h2>\s*<div[^>]*>(.*?)</div',
+            r"<h2[^>]*>\s*Abstract\s*</h2>\s*(.*?)</div",
+            r"<h2[^>]*>\s*Abstract\s*</h2>\s*<div[^>]*>(.*?)</div",
             # ID-based patterns (most reliable)
             r'id=["\']?abstracts?["\']?[^>]*>(.*?)</(?:div|section)',
             r'id=["\']?abstract-content["\']?[^>]*>(.*?)</(?:div|section)',

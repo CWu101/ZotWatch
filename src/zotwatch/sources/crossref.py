@@ -2,14 +2,15 @@
 
 import csv
 import logging
-from datetime import datetime, timedelta, timezone
+from datetime import timedelta
 from pathlib import Path
-from typing import Dict, List, Optional
+from typing import Callable, Dict, List, Optional
 
 import requests
 
 from zotwatch.config.settings import Settings
 from zotwatch.core.models import CandidateWork
+from zotwatch.utils.datetime import utc_today_start
 
 from .base import BaseSource, SourceRegistry, clean_html, clean_title, is_non_article_title, parse_date
 
@@ -98,13 +99,12 @@ class CrossrefSource(BaseSource):
         max_results: int,
     ) -> List[CandidateWork]:
         """Fetch works from specific journals by ISSN."""
-        since = datetime.now(timezone.utc) - timedelta(days=days_back)
+        since = utc_today_start() - timedelta(days=days_back)
 
         # Build filter string with ISSNs (OR logic)
         issn_filter = ",".join(f"issn:{issn}" for issn in issns)
         filter_str = f"from-created-date:{since.date().isoformat()},{issn_filter}"
 
-        url = "https://api.crossref.org/works"
         params = {
             "filter": filter_str,
             "sort": "created",
@@ -121,8 +121,48 @@ class CrossrefSource(BaseSource):
             max_results,
         )
 
+        results, journal_counts = self._fetch_paginated(
+            params,
+            max_results,
+            stat_key_fn=lambda item: (item.get("container-title") or ["Unknown"])[0],
+        )
+
+        logger.info("Fetched %d Crossref works from whitelisted journals", len(results))
+        if journal_counts:
+            for journal, count in sorted(journal_counts.items(), key=lambda x: -x[1])[:20]:
+                logger.info("  - %s: %d articles", journal, count)
+
+        return results
+
+    def _get_member_ids(self) -> List[int]:
+        """Get Crossref member IDs for configured publishers."""
+        member_ids = []
+        for name in self.config.publishers:
+            if name in MEMBER_IDS:
+                member_ids.append(MEMBER_IDS[name])
+            else:
+                logger.warning("Unknown publisher '%s', skipping", name)
+        return member_ids
+
+    def _fetch_paginated(
+        self,
+        params: Dict,
+        max_results: int,
+        stat_key_fn: Optional[Callable[[dict], str]] = None,
+    ) -> tuple[List[CandidateWork], Dict[str, int]]:
+        """Fetch works with pagination.
+
+        Args:
+            params: Request parameters (will be modified with offset).
+            max_results: Maximum number of results to fetch.
+            stat_key_fn: Optional function to extract statistics key from item.
+
+        Returns:
+            Tuple of (results list, statistics dict).
+        """
+        url = "https://api.crossref.org/works"
         results: List[CandidateWork] = []
-        journal_counts: Dict[str, int] = {}
+        stats: Dict[str, int] = {}
         offset = 0
 
         while len(results) < max_results:
@@ -145,34 +185,16 @@ class CrossrefSource(BaseSource):
                 work = self._parse_crossref_item(item)
                 if work:
                     results.append(work)
-                    # Track journal statistics
-                    journal = (item.get("container-title") or ["Unknown"])[0]
-                    journal_counts[journal] = journal_counts.get(journal, 0) + 1
+                    if stat_key_fn:
+                        key = stat_key_fn(item)
+                        stats[key] = stats.get(key, 0) + 1
 
-            # Crossref pagination
             total = message.get("total-results", 0)
             offset += len(items)
             if offset >= total or offset >= max_results:
                 break
 
-        logger.info("Fetched %d Crossref works from whitelisted journals", len(results))
-        # Log per-journal statistics (top 20)
-        if journal_counts:
-            sorted_journals = sorted(journal_counts.items(), key=lambda x: -x[1])[:20]
-            for journal, count in sorted_journals:
-                logger.info("  - %s: %d articles", journal, count)
-
-        return results
-
-    def _get_member_ids(self) -> List[int]:
-        """Get Crossref member IDs for configured publishers."""
-        member_ids = []
-        for name in self.config.publishers:
-            if name in MEMBER_IDS:
-                member_ids.append(MEMBER_IDS[name])
-            else:
-                logger.warning("Unknown publisher '%s', skipping", name)
-        return member_ids
+        return results, stats
 
     def _fetch_with_filters(
         self,
@@ -181,13 +203,12 @@ class CrossrefSource(BaseSource):
         max_results: int,
     ) -> List[CandidateWork]:
         """Fetch works from specific publishers with abstract requirement."""
-        since = datetime.now(timezone.utc) - timedelta(days=days_back)
+        since = utc_today_start() - timedelta(days=days_back)
 
         # Build filter string with member IDs (OR logic) and abstract requirement
         member_filter = ",".join(f"member:{m}" for m in member_ids)
         filter_str = f"from-created-date:{since.date().isoformat()},{member_filter},has-abstract:true"
 
-        url = "https://api.crossref.org/works"
         params = {
             "filter": filter_str,
             "sort": "created",
@@ -203,42 +224,13 @@ class CrossrefSource(BaseSource):
             max_results,
         )
 
-        results: List[CandidateWork] = []
-        publisher_counts: Dict[str, int] = {}
-        offset = 0
-
-        while len(results) < max_results:
-            params["offset"] = offset
-            try:
-                resp = self.session.get(url, params=params, timeout=30)
-                resp.raise_for_status()
-            except Exception as exc:
-                logger.warning("Failed to fetch Crossref works: %s", exc)
-                break
-
-            message = resp.json().get("message", {})
-            items = message.get("items", [])
-            if not items:
-                break
-
-            for item in items:
-                if len(results) >= max_results:
-                    break
-                work = self._parse_crossref_item(item)
-                if work:
-                    results.append(work)
-                    # Track publisher statistics
-                    publisher = item.get("publisher", "Unknown")
-                    publisher_counts[publisher] = publisher_counts.get(publisher, 0) + 1
-
-            # Crossref pagination
-            total = message.get("total-results", 0)
-            offset += len(items)
-            if offset >= total or offset >= max_results:
-                break
+        results, publisher_counts = self._fetch_paginated(
+            params,
+            max_results,
+            stat_key_fn=lambda item: item.get("publisher", "Unknown"),
+        )
 
         logger.info("Fetched %d Crossref works with abstracts", len(results))
-        # Log per-publisher statistics
         if publisher_counts:
             for pub, count in sorted(publisher_counts.items(), key=lambda x: -x[1]):
                 logger.info("  - %s: %d articles", pub, count)
@@ -247,7 +239,7 @@ class CrossrefSource(BaseSource):
 
     def _fetch_general(self, days_back: int) -> List[CandidateWork]:
         """Fetch general Crossref works."""
-        since = datetime.now(timezone.utc) - timedelta(days=days_back)
+        since = utc_today_start() - timedelta(days=days_back)
         url = "https://api.crossref.org/works"
         params = {
             "filter": f"from-created-date:{since.date().isoformat()}",

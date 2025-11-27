@@ -69,51 +69,7 @@ class ProfileStorage:
         """Initialize database schema."""
         conn = self.connect()
         conn.executescript(SCHEMA)
-        # Migrate: drop old embedding columns if they exist
-        self._migrate_drop_embedding_columns()
         conn.commit()
-
-    def _migrate_drop_embedding_columns(self) -> None:
-        """Drop deprecated embedding columns from items table."""
-        conn = self.connect()
-        # Check if old columns exist
-        cur = conn.execute("PRAGMA table_info(items)")
-        columns = {row["name"] for row in cur.fetchall()}
-
-        if "embedding" in columns or "embedding_hash" in columns:
-            # SQLite doesn't support DROP COLUMN directly in older versions
-            # We need to recreate the table
-            conn.executescript("""
-                CREATE TABLE IF NOT EXISTS items_new (
-                    key TEXT PRIMARY KEY,
-                    version INTEGER NOT NULL,
-                    title TEXT NOT NULL,
-                    abstract TEXT,
-                    creators TEXT,
-                    tags TEXT,
-                    collections TEXT,
-                    year INTEGER,
-                    doi TEXT,
-                    url TEXT,
-                    raw_json TEXT NOT NULL,
-                    content_hash TEXT,
-                    updated_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
-                );
-
-                INSERT INTO items_new (key, version, title, abstract, creators, tags, collections, year, doi, url, raw_json, content_hash, updated_at)
-                SELECT key, version, title, abstract, creators, tags, collections, year, doi, url, raw_json, content_hash, updated_at
-                FROM items;
-
-                DROP TABLE items;
-
-                ALTER TABLE items_new RENAME TO items;
-
-                CREATE INDEX IF NOT EXISTS idx_items_version ON items(version);
-                CREATE INDEX IF NOT EXISTS idx_items_content_hash ON items(content_hash);
-            """)
-
-        # Drop old candidate_embeddings table if exists
-        conn.execute("DROP TABLE IF EXISTS candidate_embeddings")
 
     def close(self) -> None:
         """Close database connection."""

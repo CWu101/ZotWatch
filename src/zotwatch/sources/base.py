@@ -1,14 +1,14 @@
 """Base source definitions and registry."""
 
-import html
 import logging
 import re
 from abc import ABC, abstractmethod
-from datetime import datetime, timezone
 from typing import Dict, List, Optional, Type
 
 from zotwatch.config.settings import Settings
 from zotwatch.core.models import CandidateWork
+from zotwatch.utils.datetime import ensure_aware, parse_date
+from zotwatch.utils.text import clean_html, clean_title
 
 logger = logging.getLogger(__name__)
 
@@ -79,52 +79,6 @@ class SourceRegistry:
 def get_enabled_sources(settings: Settings) -> List[BaseSource]:
     """Convenience function to get enabled sources."""
     return SourceRegistry.get_enabled_sources(settings)
-
-
-# Helper functions for parsing
-
-
-def clean_title(value: str | None) -> str:
-    """Clean and normalize title string."""
-    if not value:
-        return ""
-    return value.strip()
-
-
-def ensure_aware(dt: datetime | None) -> datetime | None:
-    """Ensure datetime is timezone-aware."""
-    if dt is None:
-        return None
-    if dt.tzinfo is None:
-        return dt.replace(tzinfo=timezone.utc)
-    return dt
-
-
-def parse_date(value) -> datetime | None:
-    """Parse various date formats to datetime."""
-    if not value:
-        return None
-    if isinstance(value, (int, float)):
-        return datetime.fromtimestamp(value, tz=timezone.utc)
-    if isinstance(value, str):
-        try:
-            return ensure_aware(datetime.fromisoformat(value.replace("Z", "+00:00")))
-        except ValueError:
-            try:
-                return ensure_aware(datetime.strptime(value, "%Y-%m-%d"))
-            except ValueError:
-                return None
-    return None
-
-
-def clean_html(value: str | None) -> str | None:
-    """Clean HTML tags from string."""
-    if not value:
-        return None
-    text = html.unescape(value)
-    text = re.sub(r"<[^>]+>", " ", text)
-    text = re.sub(r"\s+", " ", text).strip()
-    return text or None
 
 
 # Patterns for non-article entries (journal metadata pages)
