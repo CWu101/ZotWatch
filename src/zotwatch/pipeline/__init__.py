@@ -2,12 +2,13 @@
 
 from .dedupe import DedupeEngine
 from .enrich import AbstractEnricher, EnrichmentStats, enrich_candidates
-from .featured import FeaturedSelector
 from .fetch import fetch_candidates
 from .ingest import ingest_zotero
+from .interest_ranker import InterestRanker
+from .journal_scorer import JournalScorer
 from .profile import ProfileBuilder
+from .profile_ranker import ProfileRanker
 from .profile_stats import ProfileStatsExtractor
-from .score import WorkRanker
 
 __all__ = [
     "ingest_zotero",
@@ -18,6 +19,7 @@ __all__ = [
     "EnrichmentStats",
     "enrich_candidates",
     "DedupeEngine",
-    "WorkRanker",
-    "FeaturedSelector",
+    "ProfileRanker",
+    "InterestRanker",
+    "JournalScorer",
 ]

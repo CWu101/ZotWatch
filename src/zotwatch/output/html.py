@@ -1,13 +1,14 @@
 """HTML report generation."""
 
 import logging
-from datetime import datetime, timezone
+from datetime import datetime
 from importlib import resources
 from pathlib import Path
+from zoneinfo import ZoneInfo
 
 from jinja2 import Environment, FileSystemLoader, select_autoescape
 
-from zotwatch.core.models import FeaturedWork, OverallSummary, RankedWork, ResearcherProfile
+from zotwatch.core.models import InterestWork, OverallSummary, RankedWork, ResearcherProfile
 
 logger = logging.getLogger(__name__)
 
@@ -28,7 +29,8 @@ def render_html(
     *,
     template_dir: Path | None = None,
     template_name: str = "report.html",
-    featured_works: list[FeaturedWork] | None = None,
+    timezone_name: str = "UTC",
+    interest_works: list[InterestWork] | None = None,
     overall_summaries: dict[str, OverallSummary] | None = None,
     researcher_profile: ResearcherProfile | None = None,
 ) -> Path:
@@ -39,14 +41,16 @@ def render_html(
         output_path: Path to write HTML file.
         template_dir: Directory containing templates. If None, uses built-in templates.
         template_name: Name of template file.
-        featured_works: Optional list of featured works based on user interests.
-        overall_summaries: Optional dict with "featured" and/or "similarity" OverallSummary.
+        timezone_name: IANA timezone name (e.g., "Asia/Shanghai"). Defaults to "UTC".
+        interest_works: Optional list of interest-based works.
+        overall_summaries: Optional dict with "interest" and/or "similarity" OverallSummary.
         researcher_profile: Optional researcher profile analysis.
 
     Returns:
         Path to written HTML file.
     """
-    generated_at = datetime.now(timezone.utc)
+    tz = ZoneInfo(timezone_name)
+    generated_at = datetime.now(tz)
 
     # Determine template directory
     if template_dir is None:
@@ -72,7 +76,8 @@ def render_html(
     rendered = template.render(
         works=works,
         generated_at=generated_at,
-        featured_works=featured_works or [],
+        timezone_name=timezone_name,
+        interest_works=interest_works or [],
         overall_summaries=overall_summaries or {},
         researcher_profile=researcher_profile,
     )

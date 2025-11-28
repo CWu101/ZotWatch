@@ -102,8 +102,8 @@ class RankedWork(CandidateWork):
     summary: "PaperSummary | None" = None
 
 
-class FeaturedWork(RankedWork):
-    """Featured paper with rerank score."""
+class InterestWork(RankedWork):
+    """Interest-based paper with rerank score."""
 
     rerank_score: float
 
@@ -277,7 +277,7 @@ __all__ = [
     "ZoteroItem",
     "CandidateWork",
     "RankedWork",
-    "FeaturedWork",
+    "InterestWork",
     "RefinedInterests",
     "ProfileArtifacts",
     "BulletSummary",

@@ -4,7 +4,7 @@ import json
 import logging
 
 from zotwatch.core.models import (
-    FeaturedWork,
+    InterestWork,
     OverallSummary,
     RankedWork,
     TopicSummary,
@@ -30,14 +30,14 @@ class OverallSummarizer:
 
     def summarize_section(
         self,
-        works: list[RankedWork | FeaturedWork],
+        works: list[RankedWork | InterestWork],
         section_type: str,
     ) -> OverallSummary:
         """Generate overall summary for a section of papers.
 
         Args:
             works: List of papers to summarize
-            section_type: "featured" or "similarity"
+            section_type: "interest" or "similarity"
 
         Returns:
             OverallSummary with summary text and key themes
@@ -56,7 +56,7 @@ class OverallSummarizer:
         # Build papers list for prompt
         papers_list = self._format_papers_list(works)
 
-        section_label = "精选推荐" if section_type == "featured" else "相似度推荐"
+        section_label = "精选推荐" if section_type == "interest" else "相似度推荐"
 
         prompt = OVERALL_SUMMARY_PROMPT.format(
             paper_count=len(works),
@@ -76,7 +76,7 @@ class OverallSummarizer:
 
     def _format_papers_list(
         self,
-        works: list[RankedWork | FeaturedWork],
+        works: list[RankedWork | InterestWork],
         max_papers: int = 10,
     ) -> str:
         """Format papers list for prompt."""

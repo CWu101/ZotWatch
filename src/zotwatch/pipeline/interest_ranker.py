@@ -1,23 +1,22 @@
-"""Featured paper selection based on user interests."""
+"""Interest-based paper selection using FAISS recall + Rerank."""
 
-import csv
 import logging
-import math
 from pathlib import Path
 
 import numpy as np
 
 from zotwatch.config.settings import Settings
-from zotwatch.core.models import CandidateWork, FeaturedWork
+from zotwatch.core.models import CandidateWork, InterestWork
 from zotwatch.infrastructure.embedding import FaissIndex, VoyageReranker
 from zotwatch.infrastructure.embedding.base import BaseEmbeddingProvider
 from zotwatch.llm import InterestRefiner
+from zotwatch.pipeline.journal_scorer import JournalScorer
 
 logger = logging.getLogger(__name__)
 
 
-class FeaturedSelector:
-    """Selects featured papers based on user interests using FAISS recall + Rerank."""
+class InterestRanker:
+    """Selects papers based on user interests using FAISS recall + Rerank."""
 
     def __init__(
         self,
@@ -27,7 +26,7 @@ class FeaturedSelector:
         interest_refiner: InterestRefiner,
         base_dir: Path | str | None = None,
     ):
-        """Initialize featured selector.
+        """Initialize interest ranker.
 
         Args:
             settings: Application settings
@@ -41,58 +40,10 @@ class FeaturedSelector:
         self.reranker = reranker
         self.interest_refiner = interest_refiner
         self.base_dir = Path(base_dir) if base_dir else Path.cwd()
-        self._whitelist = self._load_whitelist()
+        self._journal_scorer = JournalScorer(self.base_dir)
 
-    def _load_whitelist(self) -> dict[str, dict]:
-        """Load journal whitelist with IF data."""
-        path = self.base_dir / "data" / "journal_whitelist.csv"
-        whitelist: dict[str, dict] = {}
-
-        if not path.exists():
-            return whitelist
-
-        try:
-            with path.open("r", encoding="utf-8") as f:
-                reader = csv.DictReader(f)
-                for row in reader:
-                    issn = (row.get("issn") or "").strip()
-                    if not issn:
-                        continue
-                    category = row.get("category", "")
-                    is_cn = "(CN)" in category
-                    if_str = row.get("impact_factor", "").strip()
-                    impact_factor = None if if_str in ("NA", "") else float(if_str)
-                    whitelist[issn] = {
-                        "impact_factor": impact_factor,
-                        "is_cn": is_cn,
-                    }
-        except Exception as exc:
-            logger.warning("Failed to load journal whitelist: %s", exc)
-
-        return whitelist
-
-    def _compute_impact_factor_score(
-        self, candidate: CandidateWork
-    ) -> tuple[float, float | None, bool]:
-        """Compute IF score for a candidate."""
-        if candidate.source == "arxiv":
-            return (0.6, None, False)
-
-        issns = candidate.extra.get("issns") or []
-        for issn in issns:
-            if issn and issn in self._whitelist:
-                entry = self._whitelist[issn]
-                if entry["is_cn"]:
-                    return (0.7, None, True)
-                if entry["impact_factor"] is not None:
-                    raw_if = entry["impact_factor"]
-                    normalized = math.log(raw_if + 1) / math.log(25)
-                    return (min(normalized, 1.0), raw_if, False)
-
-        return (0.3, None, False)
-
-    def select(self, candidates: list[CandidateWork]) -> list[FeaturedWork]:
-        """Select featured papers using interest-based reranking.
+    def select(self, candidates: list[CandidateWork]) -> list[InterestWork]:
+        """Select interest-based papers using FAISS recall + reranking.
 
         Pipeline:
         1. Refine user interests using LLM
@@ -100,13 +51,13 @@ class FeaturedSelector:
         3. Encode query and build temporary FAISS index
         4. FAISS recall top-K candidates
         5. Rerank using Voyage API
-        6. Return top featured papers
+        6. Return top interest-based papers
 
         Args:
             candidates: List of candidate works to select from
 
         Returns:
-            List of featured works sorted by relevance
+            List of interest works sorted by relevance
         """
         if not candidates:
             return []
@@ -176,21 +127,21 @@ class FeaturedSelector:
         # Step 5: Rerank using Voyage API
         logger.info("Reranking with Voyage API...")
         documents = [f"{c.title}\n{c.abstract or ''}" for c in recalled]
-        top_k_featured = min(interests_config.top_k_featured, len(recalled))
+        top_k_interest = min(interests_config.top_k_interest, len(recalled))
 
         rerank_results = self.reranker.rerank(
             query=refined.refined_query,
             documents=documents,
-            top_k=top_k_featured,
+            top_k=top_k_interest,
         )
 
-        # Step 6: Build featured works with IF scores
-        featured = []
+        # Step 6: Build interest works with IF scores
+        interest_results = []
         for idx, score in rerank_results:
             work = recalled[idx]
-            if_score, raw_if, is_cn = self._compute_impact_factor_score(work)
-            featured.append(
-                FeaturedWork(
+            if_score, raw_if, is_cn = self._journal_scorer.compute_score(work)
+            interest_results.append(
+                InterestWork(
                     **work.model_dump(),
                     score=score,  # Use rerank score as primary score
                     similarity=similarities.get(work.identifier, 0.0),
@@ -198,17 +149,17 @@ class FeaturedSelector:
                     impact_factor=raw_if,
                     is_chinese_core=is_cn,
                     rerank_score=score,
-                    label="featured",
+                    label="interest",
                 )
             )
 
         logger.info(
-            "Selected %d featured papers (top rerank score: %.4f)",
-            len(featured),
-            featured[0].rerank_score if featured else 0.0,
+            "Selected %d interest papers (top rerank score: %.4f)",
+            len(interest_results),
+            interest_results[0].rerank_score if interest_results else 0.0,
         )
 
-        return featured
+        return interest_results
 
     def _apply_exclusions(
         self,
@@ -238,4 +189,4 @@ class FeaturedSelector:
         return result
 
 
-__all__ = ["FeaturedSelector"]
+__all__ = ["InterestRanker"]

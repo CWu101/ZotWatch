@@ -86,7 +86,7 @@ class InterestsConfig(BaseModel):
     enabled: bool = False
     description: str = ""  # Natural language interest description
     top_k_recall: int = 50  # FAISS recall count, -1 to skip FAISS and use all candidates
-    top_k_featured: int = 5  # Final featured papers count
+    top_k_interest: int = 5  # Final interest-based papers count
 
 
 class RerankConfig(BaseModel):
@@ -164,6 +164,7 @@ class HTMLConfig(BaseModel):
 class OutputConfig(BaseModel):
     """Output generation configuration."""
 
+    timezone: str = "UTC"  # IANA timezone name, e.g., "Asia/Shanghai"
     rss: RSSConfig = Field(default_factory=RSSConfig)
     html: HTMLConfig = Field(default_factory=HTMLConfig)
 

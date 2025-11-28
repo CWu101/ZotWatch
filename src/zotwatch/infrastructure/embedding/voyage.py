@@ -50,12 +50,13 @@ class VoyageEmbedding(BaseEmbeddingProvider):
         # Replace empty strings with placeholder (Voyage API rejects empty input)
         texts = [t.strip() if t and t.strip() else "[untitled]" for t in texts]
         total = len(texts)
-        logger.info("Encoding %d texts with %s (batch_size=%d)", total, self._model_name, self.batch_size)
+        num_batches = (total + self.batch_size - 1) // self.batch_size
+        logger.info("Encoding %d texts with %s (%d batches)", total, self._model_name, num_batches)
 
         all_embeddings = []
-        for i in range(0, total, self.batch_size):
+        for batch_idx, i in enumerate(range(0, total, self.batch_size)):
             batch = texts[i : i + self.batch_size]
-            logger.debug("Processing batch %d-%d of %d", i, i + len(batch), total)
+            logger.info("  Batch %d/%d: encoding %d texts...", batch_idx + 1, num_batches, len(batch))
             result = client.embed(
                 batch,
                 model=self._model_name,

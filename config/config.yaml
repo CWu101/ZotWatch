@@ -39,7 +39,7 @@ scoring:
     must_read: 0.75
     consider: 0.55
 
-  # User research interests for featured recommendations (optional)
+  # User research interests for interest-based recommendations (optional)
   interests:
     enabled: true
     description: |
@@ -50,7 +50,7 @@ scoring:
       4) 大语言模型的最新进展
       5) 希望排除生物医学领域的研究
     top_k_recall: -1  # FAISS recall count, -1 to skip FAISS and use all candidates
-    top_k_featured: 5  # Final featured papers count
+    top_k_interest: 5  # Final interest-based papers count
 
   # Voyage Rerank settings (uses VOYAGE_API_KEY)
   rerank:
@@ -92,6 +92,7 @@ llm:
 
 # Output Configuration
 output:
+  timezone: "Asia/Shanghai"  # IANA timezone name (e.g., "UTC", "America/New_York")
   rss:
     title: "ZotWatch Feed"
     link: "https://ehehe.cn/zotwatch/"
