@@ -264,3 +264,6 @@ uv run zotwatch profile --full
 
 编辑 `data/journal_whitelist.csv` 文件，添加或删除期刊的 ISSN。
 
+## 许可证
+
+本项目基于 [MIT 许可证](LICENSE) 发布。
