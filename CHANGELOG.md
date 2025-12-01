@@ -7,6 +7,8 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+## [0.4.0] - 2025-12-01
+
 ### Changed
 
 - **BREAKING**: Removed `scoring.rerank.enabled` configuration flag. Reranking is now automatically enabled when `scoring.interests.enabled=true` and disabled otherwise. This simplifies configuration by eliminating redundant flags.
@@ -36,6 +38,9 @@ scoring:
 - Provider coupling validation now only runs when `interests.enabled=true`
 - Configs with `interests.enabled=false` no longer require matching providers
 - This eliminates confusing validation errors for unused rerank configurations
+
+- **Performance**: InterestRanker now uses `CachingEmbeddingProvider` to share embedding cache with ProfileRanker, reducing API calls by ~50% and improving execution time by ~45% when interest-based recommendations are enabled
+- **Documentation**: Updated README to clarify that embedding provider/model changes are automatically detected and trigger profile rebuild without manual cache deletion
 
 ## [0.3.0] - 2025-11-29
 
