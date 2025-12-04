@@ -106,7 +106,7 @@ class ScoringConfig(BaseModel):
 
         enabled: bool = False
         description: str = ""  # Natural language interest description
-        top_k_recall: int = 50  # FAISS recall count, -1 to skip FAISS and use all candidates
+        max_documents: int = 500  # Max documents for FAISS recall (must not exceed rerank API limit)
         top_k_interest: int = 5  # Final interest-based papers count
 
     class RerankConfig(BaseModel):
@@ -114,6 +114,8 @@ class ScoringConfig(BaseModel):
 
         Note: Rerank is only used when interests.enabled=true.
         Provider must match embedding.provider when interests are enabled.
+        Ensure interests.max_documents does not exceed the API limit
+        (Voyage: 1000, DashScope: 500).
         """
 
         provider: str = "voyage"  # "voyage" or "dashscope"

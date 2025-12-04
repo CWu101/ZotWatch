@@ -56,7 +56,7 @@ scoring:
       3) 视觉基础模型预训练（例如：CLIP、MAE、DINO、JEPA 等相关方法）
       4) 大语言模型的最新进展
       5) 希望排除生物医学领域的研究
-    top_k_recall: -1  # FAISS recall count, -1 to skip FAISS and use all candidates
+    max_documents: 500  # Max documents for FAISS recall (Voyage limit: 1000, DashScope: 500)
     top_k_interest: 5  # Final interest-based papers count
 
   # Rerank settings (only used when interests.enabled=true)
