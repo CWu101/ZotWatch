@@ -35,7 +35,8 @@
     @media (min-width: 1024px) { .content-container { padding: 0 4rem; } }
 
     /* Cluster graph responsive */
-    .cluster-graph-container { width: 100%; height: 280px; touch-action: none; }
+    /* touch-action: pan-y allows vertical scrolling to pass through, preventing scroll hijacking */
+    .cluster-graph-container { width: 100%; height: 280px; touch-action: pan-y; }
     @media (min-width: 640px) { .cluster-graph-container { height: 320px; } }
     @media (min-width: 768px) { .cluster-graph-container { height: 350px; } }
     #cluster-graph svg { overflow: visible; }
@@ -412,11 +413,16 @@
         const colorScale = (i) => academicColors[i % academicColors.length];
 
         let svg, simulation, node, link, sizeScale;
+        let lastWidth = 0;  // Track width to detect real resize vs scroll-triggered resize
+        let simulationStopped = false;  // Track if simulation has settled
 
         function createGraph() {
           const width = clusterContainer.clientWidth;
           const height = clusterContainer.clientHeight || 280;
           const isMobile = width < 500;
+
+          // Update tracked width
+          lastWidth = width;
 
           // Clear existing
           clusterContainer.innerHTML = '';
@@ -439,13 +445,15 @@
           const chargeStrength = isMobile ? -100 : -150;
           const linkDistance = isMobile ? 60 : 90;
 
+          simulationStopped = false;
           simulation = d3.forceSimulation(clusters)
             .force('link', d3.forceLink(links).id(d => d.id).distance(linkDistance).strength(0.2))
             .force('charge', d3.forceManyBody().strength(chargeStrength))
             .force('center', d3.forceCenter(width / 2, height / 2))
             .force('collision', d3.forceCollide().radius(d => sizeScale(d.size) + (isMobile ? 4 : 6)))
-            .velocityDecay(0.6)  // Higher decay = less momentum, reduces shaking
-            .alphaDecay(0.05);   // Faster cooling
+            .velocityDecay(0.7)  // Higher decay = less momentum, reduces shaking
+            .alphaDecay(0.08)    // Faster cooling for quicker stabilization
+            .alphaMin(0.01);     // Stop simulation when alpha drops below this
 
           // Draw links
           link = svg.append('g')
@@ -547,6 +555,17 @@
 
           node.call(drag);
 
+          // Click handler for highlighting
+          node.on('click', function(event, d) {
+            event.stopPropagation();
+            highlightNode(d);
+          });
+
+          // Click on SVG background to reset
+          svg.on('click', function() {
+            resetHighlight();
+          });
+
           // Simulation tick
           simulation.on('tick', () => {
             // Clamp node positions first so links use clamped coords
@@ -565,6 +584,11 @@
               .attr('y1', d => d.source.y)
               .attr('x2', d => d.target.x)
               .attr('y2', d => d.target.y);
+          });
+
+          // Mark simulation as stopped when it settles
+          simulation.on('end', () => {
+            simulationStopped = true;
           });
 
           function dragstarted(event, d) {
@@ -589,19 +613,75 @@
             d.fy = null;
             d3.select(this).style('cursor', 'grab');
           }
+
+          // Highlight functions for click interaction
+          function highlightNode(selectedNode) {
+            const connectedIds = new Set();
+
+            // Find all connected nodes via links
+            links.forEach(l => {
+              if (l.source.id === selectedNode.id) connectedIds.add(l.target.id);
+              if (l.target.id === selectedNode.id) connectedIds.add(l.source.id);
+            });
+
+            // Dim all nodes, highlight selected and connected
+            node.select('circle')
+              .attr('fill-opacity', d =>
+                d.id === selectedNode.id || connectedIds.has(d.id) ? 1 : 0.25)
+              .attr('stroke', d =>
+                d.id === selectedNode.id ? '#2563eb' :
+                connectedIds.has(d.id) ? '#f59e0b' : '#fff')
+              .attr('stroke-width', d =>
+                d.id === selectedNode.id || connectedIds.has(d.id) ? 3 : (isMobile ? 1.5 : 2));
+
+            // Dim all links, highlight connected
+            link
+              .attr('stroke-opacity', l =>
+                l.source.id === selectedNode.id || l.target.id === selectedNode.id ? 0.9 : 0.1)
+              .attr('stroke', l =>
+                l.source.id === selectedNode.id || l.target.id === selectedNode.id ? '#2563eb' : '#e2e8f0')
+              .attr('stroke-width', l =>
+                l.source.id === selectedNode.id || l.target.id === selectedNode.id ?
+                  Math.max(2, l.value * 3) : Math.max(1, l.value * 1.5));
+
+            // Dim labels of non-connected nodes
+            node.selectAll('text')
+              .attr('fill-opacity', d =>
+                d.id === selectedNode.id || connectedIds.has(d.id) ? 1 : 0.3);
+          }
+
+          function resetHighlight() {
+            node.select('circle')
+              .attr('fill-opacity', 0.85)
+              .attr('stroke', '#fff')
+              .attr('stroke-width', isMobile ? 1.5 : 2);
+
+            link
+              .attr('stroke-opacity', 0.6)
+              .attr('stroke', '#e2e8f0')
+              .attr('stroke-width', d => Math.max(1, d.value * 1.5));
+
+            node.selectAll('text')
+              .attr('fill-opacity', 1);
+          }
         }
 
         // Initial render
         createGraph();
 
-        // Debounced resize handler
+        // Debounced resize handler - only rebuild on actual width change
+        // Mobile browsers trigger resize on scroll (address bar show/hide) which only changes height
         let resizeTimeout;
         window.addEventListener('resize', () => {
           clearTimeout(resizeTimeout);
           resizeTimeout = setTimeout(() => {
-            // Reset node positions for new layout
-            clusters.forEach(d => { d.x = undefined; d.y = undefined; d.fx = null; d.fy = null; });
-            createGraph();
+            const newWidth = clusterContainer.clientWidth;
+            // Only rebuild if width actually changed (ignore height-only changes from mobile scroll)
+            if (Math.abs(newWidth - lastWidth) > 10) {
+              // Reset node positions for new layout
+              clusters.forEach(d => { d.x = undefined; d.y = undefined; d.fx = null; d.fy = null; });
+              createGraph();
+            }
           }, 250);
         });
       }

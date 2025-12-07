@@ -42,7 +42,7 @@ def _convert_utc_to_tz(dt: datetime | None, target_tz: ZoneInfo) -> datetime | N
     return dt.astimezone(target_tz)
 
 
-def _build_cluster_links(clustered_profile, threshold: float = 0.3) -> list[dict]:
+def _build_cluster_links(clustered_profile, threshold: float = 0.5) -> list[dict]:
     """Precompute inter-cluster similarity links from normalized centroids.
 
     Uses weighted_centroid when available. Falls back to centroid.
