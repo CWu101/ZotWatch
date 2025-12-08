@@ -34,8 +34,6 @@
     @media (min-width: 768px) { .content-container { padding: 0 2rem; } }
     @media (min-width: 1024px) { .content-container { padding: 0 4rem; } }
 
-    /* Cluster graph responsive */
-    /* touch-action: pan-y allows vertical scrolling to pass through, preventing scroll hijacking */
     .cluster-graph-container { width: 100%; height: 280px; touch-action: pan-y; }
     @media (min-width: 640px) { .cluster-graph-container { height: 320px; } }
     @media (min-width: 768px) { .cluster-graph-container { height: 350px; } }
@@ -43,7 +41,6 @@
   </style>
 </head>
 <body class="bg-bg-primary min-h-screen text-text-primary">
-  <!-- Header -->
   <header class="bg-bg-card border-b border-border-color">
     <div class="content-container py-6 md:py-8">
       <h1 class="text-xl md:text-2xl font-bold text-text-primary">ZotWatch 文献推荐</h1>
@@ -54,11 +51,9 @@
     </div>
   </header>
 
-  <!-- Researcher Profile Section (Collapsible) -->
   {% if researcher_profile %}
   <section class="py-4 md:py-6 border-b border-border-color">
     <div class="content-container">
-      <!-- Collapsible Header -->
       <button id="btn-researcher-profile" onclick="toggleSection('researcher-profile')"
               class="w-full text-left text-lg md:text-xl font-bold text-text-primary mb-3 md:mb-4 flex items-center justify-between group hover:text-accent transition-colors">
         <span class="flex items-center gap-2 flex-1 min-w-0">
@@ -75,9 +70,7 @@
         </span>
       </button>
 
-      <!-- Collapsible Content -->
       <div id="researcher-profile" class="section-expand collapsed">
-      <!-- Basic Stats - Compact Row -->
       <div class="bg-bg-card rounded-lg border border-border-color p-4 mb-4">
         <div class="grid grid-cols-4 gap-3 text-center">
           <div>
@@ -99,7 +92,6 @@
         </div>
       </div>
 
-      <!-- LLM Insights - Compact -->
       {% if researcher_profile.insights %}
       <div class="bg-accent/10 rounded-lg border border-accent/30 p-4 mb-4">
         <h3 class="text-sm font-semibold text-accent mb-2 flex items-center gap-2">
@@ -118,9 +110,7 @@
       </div>
       {% endif %}
 
-      <!-- Charts Row: Domains + Trends -->
       <div class="grid grid-cols-1 md:grid-cols-2 gap-4 mb-4">
-        <!-- Research Domains Chart -->
         {% if researcher_profile.domains %}
         <div class="bg-bg-card rounded-lg border border-border-color p-4">
           <h4 class="text-sm font-medium text-text-primary mb-3">研究领域分布</h4>
@@ -130,7 +120,6 @@
         </div>
         {% endif %}
 
-        <!-- Quarterly Trends Chart -->
         {% if researcher_profile.quarterly_trends %}
         <div class="bg-bg-card rounded-lg border border-border-color p-4">
           <h4 class="text-sm font-medium text-text-primary mb-3">阅读趋势（季度）</h4>
@@ -141,7 +130,6 @@
         {% endif %}
       </div>
 
-      <!-- Year Distribution Chart (full width) -->
       {% if researcher_profile.year_distribution %}
       <div class="bg-bg-card rounded-lg border border-border-color p-4 mb-4">
         <h4 class="text-sm font-medium text-text-primary mb-3">论文发表年份分布</h4>
@@ -151,7 +139,6 @@
       </div>
       {% endif %}
 
-      <!-- Cluster Visualization (Force-Directed Graph) - Placed after year distribution -->
       {% if researcher_profile.clustered_profile and researcher_profile.clustered_profile.valid_cluster_count > 0 %}
       <div class="bg-bg-card rounded-lg border border-border-color p-4 mb-4">
         <h4 class="text-sm font-medium text-text-primary mb-3">
@@ -165,9 +152,7 @@
       </div>
       {% endif %}
 
-      <!-- Authors and Venues Row -->
       <div class="grid grid-cols-1 md:grid-cols-2 gap-4 mb-4">
-        <!-- Top Authors -->
         {% if researcher_profile.authors %}
         <div class="bg-bg-card rounded-lg border border-border-color p-4">
           <h4 class="text-sm font-medium text-text-primary mb-2">高频关注作者</h4>
@@ -182,7 +167,6 @@
         </div>
         {% endif %}
 
-        <!-- Top Venues -->
         {% if researcher_profile.venues %}
         <div class="bg-bg-card rounded-lg border border-border-color p-4">
           <h4 class="text-sm font-medium text-text-primary mb-2">常关注期刊/会议</h4>
@@ -201,7 +185,6 @@
         {% endif %}
       </div>
 
-      <!-- Keywords -->
       {% if researcher_profile.keywords %}
       <div class="bg-bg-card rounded-lg border border-border-color p-4 mb-3">
         <h4 class="text-sm font-medium text-text-primary mb-2">高频关键词</h4>
@@ -215,28 +198,24 @@
       </div>
       {% endif %}
 
-      <!-- Generation info -->
       <div class="text-xs text-text-secondary text-right">
         画像生成于 {{ profile_generated_at.strftime('%Y-%m-%d %H:%M') }} {{ timezone_name }}
         {% if researcher_profile.model_used %}· {{ researcher_profile.model_used }}{% endif %}
       </div>
-      </div><!-- End of collapsible content -->
+      </div>
     </div>
   </section>
   {% endif %}
 
-  <!-- Chart.js Initialization for Researcher Profile -->
   {% if researcher_profile %}
   <script>
     document.addEventListener('DOMContentLoaded', function() {
-      // Chart.js global defaults for academic style
       Chart.defaults.font.family = "-apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, 'Helvetica Neue', Arial, sans-serif";
       Chart.defaults.font.size = 11;
       Chart.defaults.color = '#64748b';
       Chart.defaults.animation = false;
 
       {% if researcher_profile.domains %}
-      // Domains Horizontal Bar Chart
       const domainsCtx = document.getElementById('domainsChart');
       if (domainsCtx) {
         new Chart(domainsCtx, {
@@ -277,15 +256,13 @@
       {% endif %}
 
       {% if researcher_profile.quarterly_trends %}
-      // Quarterly Trends Bar Chart with 3 cycling colors (one per month in quarter)
       const trendsCtx = document.getElementById('trendsChart');
       if (trendsCtx) {
         const trends = [{% for t in researcher_profile.quarterly_trends[-12:] %}{ q: '{{ t.quarter }}', c: {{ t.paper_count }} }{% if not loop.last %}, {% endif %}{% endfor %}];
-        // Color palette: 3 colors cycling for months within quarters
         const monthColors = [
-          { bg: 'rgba(59, 130, 246, 0.7)', border: 'rgba(59, 130, 246, 1)' },   // Blue
-          { bg: 'rgba(16, 185, 129, 0.7)', border: 'rgba(16, 185, 129, 1)' },   // Green
-          { bg: 'rgba(245, 158, 11, 0.7)', border: 'rgba(245, 158, 11, 1)' }    // Amber
+          { bg: 'rgba(59, 130, 246, 0.7)', border: 'rgba(59, 130, 246, 1)' },
+          { bg: 'rgba(16, 185, 129, 0.7)', border: 'rgba(16, 185, 129, 1)' },
+          { bg: 'rgba(245, 158, 11, 0.7)', border: 'rgba(245, 158, 11, 1)' }
         ];
         const bgColors = trends.map((t, i) => monthColors[i % 3].bg);
         const borderColors = trends.map((t, i) => monthColors[i % 3].border);
@@ -326,7 +303,6 @@
       {% endif %}
 
       {% if researcher_profile.year_distribution %}
-      // Year Distribution Line Chart
       const yearDistCtx = document.getElementById('yearDistChart');
       if (yearDistCtx) {
         const yearData = [{% for y in researcher_profile.year_distribution %}{ year: {{ y.year }}, count: {{ y.paper_count }} }{% if not loop.last %}, {% endif %}{% endfor %}];
@@ -365,7 +341,6 @@
                   font: { size: 9 },
                   maxRotation: 45,
                   callback: function(value, index) {
-                    // Show every 5th year label to avoid crowding
                     const year = this.getLabelForValue(value);
                     return year % 5 === 0 ? year : '';
                   }
@@ -382,7 +357,6 @@
       }
       {% endif %}
 
-      // D3.js Force-Directed Cluster Graph (Responsive)
       {% if researcher_profile.clustered_profile and researcher_profile.clustered_profile.valid_cluster_count > 0 %}
       const clusterContainer = document.getElementById('cluster-graph');
       if (clusterContainer) {
@@ -394,16 +368,13 @@
             size: {{ c.member_count }},
             coherence: {{ c.coherence_score }},
             keywords: [{% for kw in c.keywords[:3] %}{{ kw|tojson }}{% if not loop.last %}, {% endif %}{% endfor %}],
-            // Use normalized (weighted) centroid from backend to avoid front-end recomputation bias
             centroid: {{ (c.weighted_centroid or c.centroid)|tojson }}
           }{% if not loop.last %},{% endif %}
           {% endfor %}
         ];
 
-        // Precomputed inter-cluster links from backend (cosine similarity of normalized centroids)
         const links = {{ cluster_links|default([], true)|tojson }};
 
-        // Muted academic color palette
         const academicColors = [
           '#4E79A7', '#F28E2B', '#E15759', '#76B7B2', '#59A14F',
           '#EDC948', '#B07AA1', '#FF9DA7', '#9C755F', '#BAB0AC',
@@ -413,35 +384,29 @@
         const colorScale = (i) => academicColors[i % academicColors.length];
 
         let svg, simulation, node, link, sizeScale;
-        let lastWidth = 0;  // Track width to detect real resize vs scroll-triggered resize
-        let simulationStopped = false;  // Track if simulation has settled
+        let lastWidth = 0;
+        let simulationStopped = false;
 
         function createGraph() {
           const width = clusterContainer.clientWidth;
           const height = clusterContainer.clientHeight || 280;
           const isMobile = width < 500;
 
-          // Update tracked width
           lastWidth = width;
-
-          // Clear existing
           clusterContainer.innerHTML = '';
 
-          // Responsive size scale
           const minRadius = isMobile ? 16 : 20;
           const maxRadius = isMobile ? 38 : 48;
           sizeScale = d3.scaleSqrt()
             .domain([0, d3.max(clusters, d => d.size)])
             .range([minRadius, maxRadius]);
 
-          // Create SVG
           svg = d3.select('#cluster-graph')
             .append('svg')
             .attr('width', width)
             .attr('height', height)
             .attr('viewBox', [0, 0, width, height]);
 
-            // Responsive simulation forces
           const chargeStrength = isMobile ? -100 : -150;
           const linkDistance = isMobile ? 60 : 90;
 
@@ -451,11 +416,10 @@
             .force('charge', d3.forceManyBody().strength(chargeStrength))
             .force('center', d3.forceCenter(width / 2, height / 2))
             .force('collision', d3.forceCollide().radius(d => sizeScale(d.size) + (isMobile ? 4 : 6)))
-            .velocityDecay(0.7)  // Higher decay = less momentum, reduces shaking
-            .alphaDecay(0.08)    // Faster cooling for quicker stabilization
-            .alphaMin(0.01);     // Stop simulation when alpha drops below this
+            .velocityDecay(0.7)
+            .alphaDecay(0.08)
+            .alphaMin(0.01);
 
-          // Draw links
           link = svg.append('g')
             .attr('stroke', '#e2e8f0')
             .attr('stroke-opacity', 0.6)
@@ -464,14 +428,12 @@
             .join('line')
             .attr('stroke-width', d => Math.max(1, d.value * 1.5));
 
-          // Draw nodes
           node = svg.append('g')
             .selectAll('g')
             .data(clusters)
             .join('g')
             .style('cursor', 'grab');
 
-          // Node circles
           node.append('circle')
             .attr('r', d => sizeScale(d.size))
             .attr('fill', (d, i) => colorScale(i))
@@ -479,7 +441,6 @@
             .attr('stroke', '#fff')
             .attr('stroke-width', isMobile ? 1.5 : 2);
 
-          // Text wrapping function
           const fontSize = isMobile ? 7 : 8;
           const lineHeight = isMobile ? 8 : 9;
           const charWidth = isMobile ? 5 : 5.5;
@@ -488,7 +449,6 @@
             text.each(function() {
               const textEl = d3.select(this);
               const label = textEl.text();
-              // Keep text well within circle bounds
               const maxWidth = radius * 1.2;
 
               textEl.text(null);
@@ -505,7 +465,6 @@
               }
               if (currentLine) lines.push(currentLine);
 
-              // Limit to 2 lines max
               if (lines.length > 2) {
                 lines = lines.slice(0, 2);
                 lines[1] = lines[1].substring(0, Math.max(0, lines[1].length - 1)) + '..';
@@ -522,7 +481,6 @@
             });
           }
 
-          // Node labels
           node.append('text')
             .text(d => d.label)
             .attr('text-anchor', 'middle')
@@ -535,7 +493,6 @@
               wrapText(d3.select(this), sizeScale(d.size));
             });
 
-          // Paper count label
           node.append('text')
             .text(d => `(${d.size}篇)`)
             .attr('text-anchor', 'middle')
@@ -543,11 +500,9 @@
             .attr('font-size', fontSize + 'px')
             .attr('fill', '#94a3b8');
 
-          // Tooltip
           node.append('title')
             .text(d => `${d.label}\n论文数: ${d.size}\n关键词: ${d.keywords.join(', ')}`);
 
-          // Drag behavior (touch + mouse)
           const drag = d3.drag()
             .on('start', dragstarted)
             .on('drag', dragged)
@@ -555,20 +510,18 @@
 
           node.call(drag);
 
-          // Click handler for highlighting
-          node.on('click', function(event, d) {
+          node.on('mousedown touchstart', function(event, d) {
+            event.preventDefault();
             event.stopPropagation();
-            highlightNode(d);
+            highlightNode(this, d);
           });
 
-          // Click on SVG background to reset
-          svg.on('click', function() {
+          node.on('mouseup touchend mouseleave', function(event, d) {
+            event.preventDefault();
             resetHighlight();
           });
 
-          // Simulation tick
           simulation.on('tick', () => {
-            // Clamp node positions first so links use clamped coords
             node.attr('transform', d => {
               const r = sizeScale(d.size);
               const padding = isMobile ? 5 : 8;
@@ -578,7 +531,6 @@
               return `translate(${d.x},${d.y})`;
             });
 
-            // Now draw links with clamped positions
             link
               .attr('x1', d => d.source.x)
               .attr('y1', d => d.source.y)
@@ -586,13 +538,12 @@
               .attr('y2', d => d.target.y);
           });
 
-          // Mark simulation as stopped when it settles
           simulation.on('end', () => {
             simulationStopped = true;
           });
 
           function dragstarted(event, d) {
-            // Use low alphaTarget to minimize shaking of other nodes
+            resetHighlight();
             if (!event.active) simulation.alphaTarget(0.05).restart();
             d.fx = d.x;
             d.fy = d.y;
@@ -614,47 +565,56 @@
             d3.select(this).style('cursor', 'grab');
           }
 
-          // Highlight functions for click interaction
-          function highlightNode(selectedNode) {
+          function highlightNode(nodeElement, selectedNode) {
             const connectedIds = new Set();
 
-            // Find all connected nodes via links
             links.forEach(l => {
               if (l.source.id === selectedNode.id) connectedIds.add(l.target.id);
               if (l.target.id === selectedNode.id) connectedIds.add(l.source.id);
             });
 
-            // Dim all nodes, highlight selected and connected
-            node.select('circle')
-              .attr('fill-opacity', d =>
-                d.id === selectedNode.id || connectedIds.has(d.id) ? 1 : 0.25)
-              .attr('stroke', d =>
-                d.id === selectedNode.id ? '#2563eb' :
-                connectedIds.has(d.id) ? '#f59e0b' : '#fff')
-              .attr('stroke-width', d =>
-                d.id === selectedNode.id || connectedIds.has(d.id) ? 3 : (isMobile ? 1.5 : 2));
+            link.each(function(l) {
+              if (l.source.id === selectedNode.id || l.target.id === selectedNode.id) {
+                this.parentNode.appendChild(this);
+              }
+            });
 
-            // Dim all links, highlight connected
+            node.each(function(d) {
+              const isSelected = d.id === selectedNode.id;
+              const isConnected = connectedIds.has(d.id);
+              
+              d3.select(this).select('circle')
+                .attr('fill-opacity', isSelected || isConnected ? 1 : 0.2)
+                .attr('stroke', isSelected || isConnected ? '#3b82f6' : '#fff')
+                .attr('stroke-width', isSelected || isConnected ? (isMobile ? 2.5 : 3) : (isMobile ? 1.5 : 2))
+                .style('filter', isSelected || isConnected ? 'drop-shadow(0 2px 4px rgba(59, 130, 246, 0.3))' : 'none');
+
+              d3.select(this).selectAll('text')
+                .attr('opacity', isSelected || isConnected ? 1 : 0.25);
+            });
+
+            node.each(function(d) {
+              if (d.id === selectedNode.id || connectedIds.has(d.id)) {
+                this.parentNode.appendChild(this);
+              }
+            });
+
             link
               .attr('stroke-opacity', l =>
-                l.source.id === selectedNode.id || l.target.id === selectedNode.id ? 0.9 : 0.1)
+                l.source.id === selectedNode.id || l.target.id === selectedNode.id ? 1 : 0.08)
               .attr('stroke', l =>
-                l.source.id === selectedNode.id || l.target.id === selectedNode.id ? '#2563eb' : '#e2e8f0')
+                l.source.id === selectedNode.id || l.target.id === selectedNode.id ? '#3b82f6' : '#e2e8f0')
               .attr('stroke-width', l =>
                 l.source.id === selectedNode.id || l.target.id === selectedNode.id ?
-                  Math.max(2, l.value * 3) : Math.max(1, l.value * 1.5));
-
-            // Dim labels of non-connected nodes
-            node.selectAll('text')
-              .attr('fill-opacity', d =>
-                d.id === selectedNode.id || connectedIds.has(d.id) ? 1 : 0.3);
+                  Math.max(2.5, l.value * 3) : Math.max(1, l.value * 1.5));
           }
 
           function resetHighlight() {
             node.select('circle')
               .attr('fill-opacity', 0.85)
               .attr('stroke', '#fff')
-              .attr('stroke-width', isMobile ? 1.5 : 2);
+              .attr('stroke-width', isMobile ? 1.5 : 2)
+              .style('filter', 'none');
 
             link
               .attr('stroke-opacity', 0.6)
@@ -662,23 +622,18 @@
               .attr('stroke-width', d => Math.max(1, d.value * 1.5));
 
             node.selectAll('text')
-              .attr('fill-opacity', 1);
+              .attr('opacity', 1);
           }
         }
 
-        // Initial render
         createGraph();
 
-        // Debounced resize handler - only rebuild on actual width change
-        // Mobile browsers trigger resize on scroll (address bar show/hide) which only changes height
         let resizeTimeout;
         window.addEventListener('resize', () => {
           clearTimeout(resizeTimeout);
           resizeTimeout = setTimeout(() => {
             const newWidth = clusterContainer.clientWidth;
-            // Only rebuild if width actually changed (ignore height-only changes from mobile scroll)
             if (Math.abs(newWidth - lastWidth) > 10) {
-              // Reset node positions for new layout
               clusters.forEach(d => { d.x = undefined; d.y = undefined; d.fx = null; d.fy = null; });
               createGraph();
             }
@@ -690,11 +645,9 @@
   </script>
   {% endif %}
 
-  <!-- Overall Summaries Section -->
   {% if overall_summaries %}
   <section class="py-5 md:py-8 border-b border-border-color">
     <div class="content-container">
-      <!-- Collapsible Header -->
       <button id="btn-overall-summaries" onclick="toggleSection('overall-summaries')"
               class="w-full text-left text-lg md:text-xl font-bold text-text-primary mb-3 md:mb-4 flex items-center justify-between group hover:text-accent transition-colors">
         <span class="flex items-center gap-2 flex-1 min-w-0">
@@ -711,7 +664,6 @@
         </span>
       </button>
 
-      <!-- Collapsible Content -->
       <div id="overall-summaries" class="section-expand expanded">
       <div class="space-y-4 md:space-y-6">
         {% if overall_summaries.interest %}
@@ -748,16 +700,14 @@
         </div>
         {% endif %}
       </div>
-      </div><!-- End of collapsible content -->
+      </div>
     </div>
   </section>
   {% endif %}
 
-  <!-- Interest-based Recommendations Section -->
   {% if interest_works %}
   <section class="py-5 md:py-8 border-b border-border-color">
     <div class="content-container">
-      <!-- Collapsible Header -->
       <div class="mb-3 md:mb-4">
         <button id="btn-interest-works" onclick="toggleSection('interest-works')"
                 class="w-full text-left text-lg md:text-xl font-bold text-text-primary flex items-center justify-between group hover:text-accent transition-colors">
@@ -778,24 +728,19 @@
         <p class="text-xs text-text-secondary mt-1 ml-7 md:hidden">基于研究兴趣匹配，共 {{ interest_works|length }} 篇</p>
       </div>
 
-      <!-- Collapsible Content -->
       <div id="interest-works" class="section-expand expanded">
       <div class="space-y-4 md:space-y-5">
         {% for work in interest_works %}
         <article class="bg-bg-card rounded-lg border border-border-color overflow-hidden hover:border-accent/50 transition-colors">
           <div class="p-4 md:p-5">
-            <!-- Title and metadata -->
             <div class="mb-3">
-              <!-- Tags row -->
               <div class="flex items-center gap-2 mb-2 flex-wrap">
                 <span class="inline-flex items-center px-2.5 py-0.5 rounded text-xs font-medium bg-accent/10 text-accent border border-accent/30">
                   匹配度 {{ '%.0f'|format(work.rerank_score * 100) }}%
                 </span>
                 <span class="text-xs text-text-secondary">{{ work.source }}</span>
-                <!-- Date: visible on mobile, hidden on md+ -->
                 <span class="text-xs text-text-secondary md:hidden">· {{ work.published.strftime('%Y-%m-%d') if work.published else '未知' }}</span>
               </div>
-              <!-- Title and date row -->
               <div class="flex items-start justify-between gap-3 md:gap-4">
                 <div class="flex-1">
                   <h2 class="text-base md:text-lg font-semibold text-text-primary leading-tight">
@@ -807,12 +752,10 @@
                   <p class="text-sm text-text-secondary mt-0.5 leading-snug">{{ work.translated_title }}</p>
                   {% endif %}
                 </div>
-                <!-- Date: hidden on mobile, visible on md+ -->
                 <div class="hidden md:block text-right text-sm text-text-secondary flex-shrink-0">
                   <div class="font-medium">{{ work.published.strftime('%Y-%m-%d') if work.published else '未知' }}</div>
                 </div>
               </div>
-              <!-- Venue: below title on mobile -->
               <div class="mt-1 text-xs text-text-secondary" title="{{ work.venue or '' }}">
                 {{ work.venue or '未知来源' }}
                 {% if work.is_chinese_core %}
@@ -823,12 +766,10 @@
               </div>
             </div>
 
-            <!-- Authors -->
             <p class="text-sm text-text-secondary mb-3">
               {{ work.authors[:5] | join('，') }}{% if work.authors|length > 5 %} 等{% endif %}
             </p>
 
-            <!-- DOI -->
             <div class="flex flex-wrap gap-x-4 gap-y-1 text-xs text-text-secondary mb-4">
               {% if work.doi %}
               <span class="flex items-center">
@@ -843,7 +784,6 @@
               {% endif %}
             </div>
 
-            <!-- Abstract (collapsible) -->
             {% if work.abstract %}
             <div class="bg-bg-hover/50 rounded-lg p-4 mb-4 border border-border-color">
               <button id="btn-interest-abstract-{{ loop.index }}" onclick="toggleSection('interest-abstract-{{ loop.index }}')"
@@ -864,7 +804,6 @@
             </div>
             {% endif %}
 
-            <!-- AI Summary -->
             {% if work.summary %}
             <div class="bg-accent/10 rounded-lg p-4 mb-4 border border-accent/30">
               <h3 class="text-sm font-semibold text-accent mb-3 flex items-center">
@@ -907,7 +846,6 @@
             </div>
             {% endif %}
 
-            <!-- Score details -->
             <div class="pt-4 border-t border-border-color">
               <div class="flex flex-wrap gap-3 text-xs">
                 <span class="px-2 py-1 bg-bg-hover rounded text-text-secondary">相似度 {{ '%.2f'|format(work.similarity) }}</span>
@@ -925,15 +863,12 @@
         </article>
         {% endfor %}
       </div>
-      </div><!-- End of collapsible content -->
     </div>
   </section>
   {% endif %}
 
-  <!-- Similarity Recommendations Section -->
   <main class="py-5 md:py-8">
     <div class="content-container">
-      <!-- Collapsible Header -->
       <div class="mb-3 md:mb-4">
         <button id="btn-similarity-works" onclick="toggleSection('similarity-works')"
                 class="w-full text-left text-lg md:text-xl font-bold text-text-primary flex items-center justify-between group hover:text-accent transition-colors">
@@ -954,15 +889,12 @@
         <p class="text-xs text-text-secondary mt-1 ml-7 md:hidden">按相关性评分排序，共 {{ works|length }} 篇</p>
       </div>
 
-      <!-- Collapsible Content -->
       <div id="similarity-works" class="section-expand expanded">
       <div class="space-y-4 md:space-y-5">
         {% for work in works %}
         <article class="bg-bg-card rounded-lg border border-border-color overflow-hidden hover:border-accent/50 transition-colors">
           <div class="p-4 md:p-5">
-            <!-- Title and metadata -->
             <div class="mb-3">
-              <!-- Tags row -->
               <div class="flex items-center gap-2 mb-2 flex-wrap">
                 <span class="inline-flex items-center px-2.5 py-0.5 rounded text-xs font-medium
                   {% if work.label == 'must_read' %}bg-green-100 text-green-700 border border-green-300
@@ -973,10 +905,8 @@
                 <span class="text-xs text-text-secondary">评分 {{ '%.2f'|format(work.score) }}</span>
                 <span class="text-xs text-text-secondary">·</span>
                 <span class="text-xs text-text-secondary">{{ work.source }}</span>
-                <!-- Date: visible on mobile, hidden on md+ -->
                 <span class="text-xs text-text-secondary md:hidden">· {{ work.published.strftime('%Y-%m-%d') if work.published else '未知' }}</span>
               </div>
-              <!-- Title and date row -->
               <div class="flex items-start justify-between gap-3 md:gap-4">
                 <div class="flex-1">
                   <h2 class="text-base md:text-lg font-semibold text-text-primary leading-tight">
@@ -988,12 +918,10 @@
                   <p class="text-sm text-text-secondary mt-0.5 leading-snug">{{ work.translated_title }}</p>
                   {% endif %}
                 </div>
-                <!-- Date: hidden on mobile, visible on md+ -->
                 <div class="hidden md:block text-right text-sm text-text-secondary flex-shrink-0">
                   <div class="font-medium">{{ work.published.strftime('%Y-%m-%d') if work.published else '未知' }}</div>
                 </div>
               </div>
-              <!-- Venue: below title -->
               <div class="mt-1 text-xs text-text-secondary" title="{{ work.venue or '' }}">
                 {{ work.venue or '未知来源' }}
                 {% if work.is_chinese_core %}
@@ -1004,12 +932,10 @@
               </div>
             </div>
 
-            <!-- Authors -->
             <p class="text-sm text-text-secondary mb-3">
               {{ work.authors[:5] | join('，') }}{% if work.authors|length > 5 %} 等{% endif %}
             </p>
 
-            <!-- DOI -->
             <div class="flex flex-wrap gap-x-4 gap-y-1 text-xs text-text-secondary mb-4">
               {% if work.doi %}
               <span class="flex items-center">
@@ -1024,7 +950,6 @@
               {% endif %}
             </div>
 
-            <!-- Abstract (collapsible) -->
             {% if work.abstract %}
             <div class="bg-bg-hover/50 rounded-lg p-4 mb-4 border border-border-color">
               <button id="btn-abstract-{{ loop.index }}" onclick="toggleSection('abstract-{{ loop.index }}')"
@@ -1045,7 +970,6 @@
             </div>
             {% endif %}
 
-            <!-- AI Summary -->
             {% if work.summary %}
             <div class="bg-accent/10 rounded-lg p-4 mb-4 border border-accent/30">
               <h3 class="text-sm font-semibold text-accent mb-3 flex items-center">
@@ -1088,7 +1012,6 @@
             </div>
             {% endif %}
 
-            <!-- Score details -->
             <div class="pt-4 border-t border-border-color">
               <div class="flex flex-wrap gap-3 text-xs">
                 <span class="px-2 py-1 bg-bg-hover rounded text-text-secondary">相似度 {{ '%.2f'|format(work.similarity) }}</span>
@@ -1106,11 +1029,9 @@
         </article>
         {% endfor %}
       </div>
-      </div><!-- End of collapsible content -->
     </div>
   </main>
 
-  <!-- Footer -->
   <footer class="bg-bg-card border-t border-border-color mt-12">
     <div class="content-container py-6 text-center text-sm text-text-secondary">
       灵感来自 <a href="https://github.com/Yorks0n/ZotWatch" class="text-accent hover:text-accent-hover transition-colors">ZotWatch</a>
@@ -1131,7 +1052,6 @@
         }
         if (hint) hint.textContent = '点击收起';
         if (icon) icon.style.transform = 'rotate(180deg)';
-        // Trigger chart resize for hidden charts
         if (id === 'researcher-profile') {
           setTimeout(() => { window.dispatchEvent(new Event('resize')); }, 100);
         }
