@@ -1,5 +1,6 @@
 """Paper summarization service."""
 
+import hashlib
 import json
 import logging
 
@@ -30,6 +31,8 @@ class PaperSummarizer:
         self.llm = llm
         self.storage = storage
         self.model = model
+        if self.storage:
+            self._ensure_cache_signature()
 
     def summarize(self, work: RankedWork, *, force: bool = False) -> PaperSummary:
         """Generate or retrieve cached summary for a paper."""
@@ -80,6 +83,20 @@ class PaperSummarizer:
             logger.info("Generated summary for %s using %s", paper_id, summary.model_used)
 
         return summary
+
+    def _summary_cache_signature(self) -> str:
+        payload = {
+            "provider": self.llm.name,
+            "model": self.model or "",
+            "bullet_prompt": BULLET_SUMMARY_PROMPT,
+            "detailed_prompt": DETAILED_ANALYSIS_PROMPT,
+        }
+        encoded = json.dumps(payload, sort_keys=True).encode("utf-8")
+        return hashlib.sha256(encoded).hexdigest()
+
+    def _ensure_cache_signature(self) -> None:
+        signature = self._summary_cache_signature()
+        self.storage.ensure_summary_cache_signature(signature)
 
     def _parse_bullets(self, content: str) -> BulletSummary:
         """Parse bullet summary from LLM response."""

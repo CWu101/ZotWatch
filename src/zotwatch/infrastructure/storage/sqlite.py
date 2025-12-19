@@ -273,6 +273,19 @@ class ProfileStorage:
         )
         return cur.fetchone() is not None
 
+    def ensure_summary_cache_signature(self, signature: str) -> None:
+        """Invalidate cached summaries when the signature changes."""
+        cached_signature = self.get_metadata("summary_cache_signature")
+        if cached_signature == signature:
+            return
+        conn = self.connect()
+        conn.execute("DELETE FROM summaries")
+        conn.execute(
+            "REPLACE INTO metadata(key, value) VALUES(?, ?)",
+            ("summary_cache_signature", signature),
+        )
+        conn.commit()
+
     # Profile analysis helpers
 
     def get_profile_analysis(self, library_hash: str) -> ResearcherProfile | None:

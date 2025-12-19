@@ -79,17 +79,22 @@ class ZoteroClient:
             params = {}
             time.sleep(self.polite_delay)
 
-    def fetch_deleted(self, since_version: int | None) -> list[str]:
-        """Fetch deleted item keys since version."""
+    def fetch_deleted(self, since_version: int | None) -> tuple[list[str], int | None]:
+        """Fetch deleted item keys since version.
+
+        Returns:
+            Tuple of (deleted_keys, response_version).
+        """
         if since_version is None:
-            return []
+            return [], None
         url = f"{self.base_user_url}/deleted"
         resp = self.http.get(url, params={"since": since_version})
         resp.raise_for_status()
         payload = resp.json() or {}
         deleted_items = payload.get("items", [])
+        response_version = int(resp.headers.get("Last-Modified-Version", 0)) or None
         logger.info("Fetched %d deleted item tombstones", len(deleted_items))
-        return deleted_items
+        return deleted_items, response_version
 
 
 def _parse_next_link(link_header: str | None) -> str | None:
@@ -164,11 +169,17 @@ class ZoteroIngestor:
             if on_progress:
                 on_progress("ingest", f"Processed {stats.fetched} items...")
 
-        deleted_keys = self.client.fetch_deleted(since_version=max_version if not full else None)
+        deleted_keys, deleted_version = self.client.fetch_deleted(
+            since_version=max_version if not full else None
+        )
         self.storage.remove_items(deleted_keys)
         stats.removed = len(deleted_keys)
 
-        if stats.fetched or full:
+        # Update max_version with deleted response version if available
+        if deleted_version:
+            max_version = max(max_version, deleted_version)
+
+        if stats.fetched or stats.removed or full:
             stats.last_modified_version = max_version
             if max_version:
                 self.storage.set_last_modified_version(max_version)

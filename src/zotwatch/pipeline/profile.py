@@ -172,6 +172,8 @@ class ProfileBuilder:
 
         if clustered_profile.valid_cluster_count == 0:
             logger.info("No valid clusters created (library may be too small)")
+            # Clear stale clustered profile cache to prevent Ranker from loading outdated data
+            self.storage.clear_clustered_profile_cache()
             return None
 
         # Save to storage

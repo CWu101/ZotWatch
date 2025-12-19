@@ -181,12 +181,6 @@ class LLMConfig(BaseModel):
         backoff_factor: float = 2.0
         initial_delay: float = 1.0
 
-    class SummarizeConfig(BaseModel):
-        """LLM summarization settings."""
-
-        top_n: int = 20
-        cache_expiry_days: int = 30
-
     class TranslationConfig(BaseModel):
         """Title translation configuration."""
 
@@ -199,7 +193,6 @@ class LLMConfig(BaseModel):
     max_tokens: int = 1024
     temperature: float = 0.3
     retry: RetryConfig = Field(default_factory=RetryConfig)
-    summarize: SummarizeConfig = Field(default_factory=SummarizeConfig)
     translation: TranslationConfig = Field(default_factory=TranslationConfig)
 
 
